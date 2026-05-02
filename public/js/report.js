@@ -160,6 +160,7 @@ async function loadHistory() {
 // Team selection (manual)
 // ─────────────────────────────────────────────
 function populateMultiSelects(players) {
+  console.log("Struttura giocatore:", players[0]);
   const opts = players
     .sort((a, b) => b.ovr - a.ovr)
     .map((p) => `<option value="${p.id}">${p.name} (${p.role}, OVR ${p.ovr})</option>`)
