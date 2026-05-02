@@ -22,6 +22,7 @@ const btnSubmitReport = document.getElementById("btn-submit-report");
 const toast = document.getElementById("toast");
 const historyList = document.getElementById("history-list");
 
+
 // ─────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────
@@ -307,3 +308,4 @@ async function init() {
 }
 
 init();
+console.log("PLAYERS:", allPlayers);
