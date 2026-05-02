@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Matchmaker – FantaCalcetto</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav__logo">⚽ FantaCalcetto</a>
+    <ul class="nav__links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/players.html">Giocatori</a></li>
+      <li><a href="/chemistry.html">Intesa</a></li>
+      <li><a href="/matchmaker.html" class="active">Matchmaker</a></li>
+      <li><a href="/report.html">Report</a></li>
+    </ul>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div>
+        <h1 class="page-header__title">⚡ Matchmaker</h1>
+        <p class="page-header__sub">Seleziona i giocatori, genera squadre bilanciate con formazione grafica.</p>
+      </div>
+    </div>
+
+    <!-- Selection -->
+    <section class="section">
+      <div class="matchmaker-toolbar">
+        <div class="search-wrap" style="flex:1;max-width:300px">
+          <span class="search-icon">🔍</span>
+          <input id="player-search" class="input search-input" type="text" placeholder="Cerca giocatore…"/>
+        </div>
+        <span id="sel-count">0 selezionati</span>
+        <button id="btn-autoselect" class="btn btn--secondary btn--sm">🎯 Auto-seleziona presenti</button>
+        <button id="btn-clear-sel"  class="btn btn--secondary btn--sm">✕ Azzera</button>
+      </div>
+      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.75rem">
+        Ordinati per partite giocate. Seleziona un numero <strong>pari ≥ 10</strong>.
+      </p>
+      <div id="player-checkbox-list" class="matchmaker-list"></div>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem">
+        <button id="btn-generate" class="btn btn--primary btn--lg" disabled>⚡ Genera Squadre</button>
+        <a href="/report.html" class="btn btn--secondary">📊 Report</a>
+      </div>
+    </section>
+
+    <!-- Result -->
+    <section id="teams-section" class="section hidden">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem">
+        <h2 style="margin:0">🏟️ Squadre</h2>
+        <span id="sa-energy" style="font-size:.78rem;color:var(--text-muted);font-family:monospace"></span>
+      </div>
+
+      <div class="teams-result-grid">
+        <!-- Team A -->
+        <div class="team-result-card team-result-card--a">
+          <div class="team-result-header">
+            <span>🔵 Squadra A</span>
+            <span>Forza: <strong id="str-a">–</strong></span>
+          </div>
+          <div id="team-a-panel" class="team-panel"></div>
+        </div>
+
+        <!-- Team B -->
+        <div class="team-result-card team-result-card--b">
+          <div class="team-result-header">
+            <span>🔴 Squadra B</span>
+            <span>Forza: <strong id="str-b">–</strong></span>
+          </div>
+          <div id="team-b-panel" class="team-panel"></div>
+        </div>
+      </div>
+
+      <div class="ovr-summary" style="margin-top:1.25rem">
+        <div class="ovr-summary__item"><div class="ovr-summary__label">Squadra A</div><div class="ovr-summary__value" id="str-a-val">–</div></div>
+        <span id="ovr-diff" class="ovr-diff ovr-diff--ok">Δ forza: –</span>
+        <div class="ovr-summary__item"><div class="ovr-summary__label">Squadra B</div><div class="ovr-summary__value" id="str-b-val">–</div></div>
+      </div>
+
+      <div style="margin-top:1.25rem">
+        <a href="/report.html" class="btn btn--success btn--lg">📊 Inserisci Risultato →</a>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="/js/matchmaker.js"></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Intesa – FantaCalcetto</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav__logo">⚽ FantaCalcetto</a>
+    <ul class="nav__links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/players.html">Giocatori</a></li>
+      <li><a href="/chemistry.html" class="active">Intesa</a></li>
+      <li><a href="/matchmaker.html">Matchmaker</a></li>
+      <li><a href="/report.html">Report</a></li>
+    </ul>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div>
+        <h1 class="page-header__title">🤝 Intesa tra giocatori</h1>
+        <p class="page-header__sub">Seleziona un giocatore per gestire le sue relazioni.</p>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="card chem-legend-card">
+      <div class="chem-legend-row">
+        <span class="chem-badge chem-badge--0">0 · Nessuna</span>
+        <span class="chem-badge chem-badge--1">1 · Di vista</span>
+        <span class="chem-badge chem-badge--2">2 · Avversari</span>
+        <span class="chem-badge chem-badge--3">3 · Compagni</span>
+        <span class="chem-badge chem-badge--4">4 · Perfetti</span>
+      </div>
+      <p class="chem-legend-note">
+        ⚠️ Ogni giocatore deve avere <strong>almeno 3 relazioni ≥ 1</strong>
+        (min. 2 da compagno/avversari + 1 ulteriore) per poter partecipare alle partite.
+      </p>
+    </div>
+
+    <!-- Player picker -->
+    <div class="chem-picker-row">
+      <div class="search-wrap" style="flex:1;max-width:340px">
+        <span class="search-icon">🔍</span>
+        <input id="player-search" class="input search-input" type="text" placeholder="Cerca giocatore…"/>
+      </div>
+      <div id="player-pills" class="player-pills"></div>
+    </div>
+
+    <!-- Selected player panel -->
+    <div id="chem-panel" class="hidden">
+      <div class="chem-panel-header">
+        <div class="chem-panel-player">
+          <span id="panel-icon" class="panel-icon">⚽</span>
+          <div>
+            <h2 id="panel-name">–</h2>
+            <p id="panel-meta" style="color:var(--text-muted);font-size:.85rem"></p>
+          </div>
+        </div>
+        <div id="panel-status" class="panel-status"></div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="chem-filter-bar">
+        <input id="rel-search" class="input input--sm" type="text" placeholder="Filtra per nome…" style="max-width:200px"/>
+        <div class="chem-filter-btns">
+          <button class="btn btn--secondary btn--sm filter-btn active" data-filter="all">Tutti</button>
+          <button class="btn btn--secondary btn--sm filter-btn" data-filter="set">Con relazione</button>
+          <button class="btn btn--secondary btn--sm filter-btn" data-filter="unset">Senza relazione</button>
+        </div>
+      </div>
+
+      <div id="rel-grid" class="rel-grid"></div>
+    </div>
+
+    <div id="no-player-hint" class="empty-state" style="padding:3rem 0">
+      👆 Seleziona un giocatore per gestire le sue relazioni
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="/js/chemistry-page.js"></script>
+</body>
+</html>
