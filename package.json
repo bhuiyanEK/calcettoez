@@ -1,0 +1,21 @@
+{
+  "name": "fantacalcetto",
+  "version": "1.0.0",
+  "description": "FantaCalcetto Manager – gestione calcetto con Supabase",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "uuid": "^14.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
