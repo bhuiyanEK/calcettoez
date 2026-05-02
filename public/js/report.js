@@ -116,19 +116,21 @@ function renderRatingsSection() {
 async function loadHistory() {
   try {
     const matches = await ReportAPI.getHistory();
+
     if (matches.length === 0) {
       historyList.innerHTML = `<p class="empty-state">Nessuna partita registrata.</p>`;
       return;
     }
+
+    // 👇 QUI dentro va il codice che hai incollato
     historyList.innerHTML = matches
       .slice()
       .reverse()
       .map((m) => {
-        // 🔥 FIX: supporta sia camelCase che snake_case
         const scoreA = m.scoreA ?? m.score_a;
         const scoreB = m.scoreB ?? m.score_b;
         const dateRaw = m.date ?? m.created_at;
-    
+
         const date = new Date(dateRaw).toLocaleDateString("it-IT", {
           day: "2-digit",
           month: "2-digit",
@@ -136,7 +138,7 @@ async function loadHistory() {
           hour: "2-digit",
           minute: "2-digit",
         });
-    
+
         return `
         <div class="card history-card">
           <div class="history-card__score">
@@ -148,11 +150,11 @@ async function loadHistory() {
         </div>`;
       })
       .join("");
+
   } catch (err) {
     historyList.innerHTML = `<p class="empty-state">Errore nel caricamento.</p>`;
   }
 }
-
 // ─────────────────────────────────────────────
 // Team selection (manual)
 // ─────────────────────────────────────────────
