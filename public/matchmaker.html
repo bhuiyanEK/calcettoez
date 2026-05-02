@@ -5,6 +5,213 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Matchmaker – FantaCalcetto</title>
   <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    /* ── Captain selection ── */
+    .captain-step {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .captain-step__title {
+      font-size: .85rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--text-muted); margin-bottom: .75rem;
+    }
+    .captain-slots { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .captain-slot {
+      flex: 1; min-width: 180px;
+      background: var(--bg-elevated);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: .75rem 1rem;
+      display: flex; align-items: center; gap: .6rem;
+      font-size: .88rem; color: var(--text-muted);
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .captain-slot.filled { border-style: solid; color: var(--text-primary); background: var(--bg-hover); }
+    .captain-slot--a.filled { border-color: var(--accent); }
+    .captain-slot--b.filled { border-color: var(--danger); }
+    .captain-slot__badge { font-size: 1.3rem; flex-shrink: 0; }
+    .captain-slot__info  { flex: 1; min-width: 0; }
+    .captain-slot__name  { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .captain-slot__role  { font-size: .72rem; color: var(--text-muted); }
+    .captain-slot__clear {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 1.1rem; line-height: 1;
+      padding: .2rem; border-radius: 4px;
+      transition: color var(--transition);
+    }
+    .captain-slot__clear:hover { color: var(--danger); }
+
+    .cb-captain-btn {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: 4px; padding: .2rem .5rem;
+      font-size: .72rem; font-weight: 600; cursor: pointer;
+      color: var(--text-secondary); white-space: nowrap;
+      transition: background var(--transition), border-color var(--transition), color var(--transition);
+    }
+    .cb-captain-btn:hover { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+    .cb-captain-btn.active-a { background: rgba(61,126,255,.18); border-color: var(--accent); color: var(--accent); }
+    .cb-captain-btn.active-b { background: rgba(231,76,60,.18); border-color: var(--danger); color: var(--danger); }
+
+    /* ── Teams editor toolbar ── */
+    .teams-editor-toolbar {
+      display: flex; gap: .65rem; flex-wrap: wrap; align-items: center;
+      margin-bottom: 1.25rem; padding: .85rem 1rem;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .teams-editor-toolbar .btn { font-size: .8rem; padding: .4rem .9rem; }
+    .spacer { flex: 1; }
+
+    /* ── Balance meter ── */
+    .balance-meter {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+    }
+    .balance-meter__header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: .65rem; gap: 1rem; flex-wrap: wrap;
+    }
+    .balance-meter__label {
+      font-size: .78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+    }
+    .balance-verdict {
+      font-size: .85rem; font-weight: 700; padding: .3rem .8rem;
+      border-radius: 99px; transition: all .3s ease;
+    }
+    .balance-verdict--great { background: rgba(45,204,136,.15); color: #2dcc88; }
+    .balance-verdict--ok    { background: rgba(61,126,255,.15);  color: var(--accent); }
+    .balance-verdict--unbal { background: rgba(245,166,35,.15);  color: var(--warning); }
+    .balance-verdict--bad   { background: rgba(231,76,60,.15);   color: var(--danger); }
+    .balance-bar-wrap {
+      display: flex; align-items: center; gap: .75rem;
+    }
+    .balance-team-label { font-size: .78rem; font-weight: 700; min-width: 70px; }
+    .balance-team-label--a { color: var(--accent); }
+    .balance-team-label--b { color: var(--danger); text-align: right; }
+    .balance-track {
+      flex: 1; height: 10px; background: var(--bg-elevated);
+      border-radius: 99px; overflow: hidden; position: relative;
+    }
+    .balance-fill-a {
+      height: 100%; background: linear-gradient(90deg, var(--accent), #5b9aff);
+      border-radius: 99px 0 0 99px; float: left;
+      transition: width .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    .balance-fill-b {
+      height: 100%; background: linear-gradient(90deg, #ff6b5b, var(--danger));
+      border-radius: 0 99px 99px 0; float: right;
+      transition: width .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    .balance-scores {
+      display: flex; justify-content: space-between;
+      margin-top: .4rem; font-size: .75rem; color: var(--text-muted);
+    }
+    .swap-delta {
+      font-size: .75rem; font-weight: 700; padding: .2rem .5rem;
+      border-radius: 99px; animation: fadeIn .3s ease;
+    }
+    .swap-delta--better { background: rgba(45,204,136,.15); color: var(--success); }
+    .swap-delta--worse  { background: rgba(231,76,60,.15);  color: var(--danger); }
+    .swap-delta--same   { background: var(--bg-elevated);   color: var(--text-muted); }
+    @keyframes fadeIn { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
+
+    /* ── Interactive player cards ── */
+    .team-player-card {
+      cursor: pointer; position: relative; user-select: none;
+      transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), transform .15s ease;
+    }
+    .team-player-card:hover:not(.locked) { border-color: var(--border-accent); transform: translateX(2px); }
+    .team-player-card.selected {
+      border-color: #ffc800 !important;
+      background: rgba(255,200,0,.08) !important;
+      box-shadow: 0 0 0 2px rgba(255,200,0,.25);
+    }
+    .team-player-card.drag-over {
+      border-color: var(--success) !important;
+      background: rgba(45,204,136,.08) !important;
+    }
+    .team-player-card.dragging { opacity: .35; transform: scale(.97); }
+    .team-player-card.locked  { cursor: not-allowed; }
+    .team-player-card.is-captain::before {
+      content: '🏅';
+      position: absolute; top: 4px; right: 28px;
+      font-size: .75rem;
+    }
+
+    /* ── Swap action bar ── */
+    .swap-action-bar {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .75rem 1rem;
+      background: rgba(255,200,0,.06);
+      border: 2px solid rgba(255,200,0,.35);
+      border-radius: var(--radius-sm);
+      margin-bottom: .75rem; flex-wrap: wrap;
+      animation: slideDown .25s ease;
+    }
+    @keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+    .swap-action-bar__info { flex: 1; font-size: .85rem; font-weight: 600; color: #ffc800; min-width: 150px; }
+    .swap-action-bar__sub  { font-size: .75rem; color: var(--text-muted); font-weight: 400; }
+
+    /* ── Suggestions ── */
+    .suggestions-panel {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+    }
+    .suggestions-panel__title {
+      font-size: .8rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted); margin-bottom: .75rem;
+    }
+    .suggestion-item {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .5rem .75rem; background: var(--bg-elevated);
+      border-radius: var(--radius-sm); margin-bottom: .4rem;
+      font-size: .82rem; flex-wrap: wrap;
+      border: 1px solid transparent; transition: border-color var(--transition);
+      cursor: pointer;
+    }
+    .suggestion-item:hover { border-color: var(--border-accent); }
+    .suggestion-item__text  { flex: 1; color: var(--text-secondary); min-width: 150px; }
+    .suggestion-item__delta { font-weight: 700; font-size: .78rem; }
+    .suggestion-item__delta--pos { color: var(--success); }
+    .suggestion-item__delta--neg { color: var(--danger); }
+
+    /* ── Lock button ── */
+    .lock-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: 4px; width: 22px; height: 22px;
+      font-size: .75rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background var(--transition), border-color var(--transition);
+    }
+    .lock-btn:hover { background: var(--bg-hover); border-color: var(--warning); }
+    .lock-btn.locked { background: rgba(245,166,35,.12); border-color: var(--warning); }
+
+    /* ── Captain confirm modal ── */
+    .swap-confirm-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 1rem; backdrop-filter: blur(4px);
+    }
+    .swap-confirm-box {
+      background: var(--bg-elevated); border: 1px solid var(--border-accent);
+      border-radius: var(--radius); padding: 1.5rem;
+      max-width: 380px; width: 100%; box-shadow: var(--shadow);
+    }
+    .swap-confirm-box h3 { margin-bottom: .5rem; }
+    .swap-confirm-box p  { margin-bottom: 1.25rem; color: var(--text-secondary); font-size: .9rem; }
+    .swap-confirm-btns  { display: flex; gap: .75rem; justify-content: flex-end; }
+
+    /* misc */
+    .cb-partite { font-size:.75rem; color:var(--text-muted); white-space:nowrap; }
+    .counter--ready { color: var(--success) !important; font-weight: 700; }
+    .counter--over  { color: var(--danger) !important; }
+    .tpc-role-label { font-size:.72rem; color:var(--text-muted); text-transform:capitalize; }
+    .tpc-ovr-assigned { font-size:1rem; font-weight:800; color:var(--accent); }
+  </style>
 </head>
 <body>
   <nav class="nav">
@@ -22,12 +229,33 @@
     <div class="page-header">
       <div>
         <h1 class="page-header__title">⚡ Matchmaker</h1>
-        <p class="page-header__sub">Seleziona i giocatori, genera squadre bilanciate con formazione grafica.</p>
+        <p class="page-header__sub">Genera squadre bilanciate, poi modifica con drag&amp;drop o selezione. L'algoritmo aiuta, ma l'ultima parola è tua.</p>
       </div>
     </div>
 
-    <!-- Selection -->
+    <!-- STEP 1: Selection -->
     <section class="section">
+      <!-- Captain slots -->
+      <div class="captain-step">
+        <div class="captain-step__title">🏅 Capitani fissi (opzionale) — saranno nelle squadre diverse</div>
+        <div class="captain-slots">
+          <div class="captain-slot captain-slot--a" id="captain-slot-a">
+            <span class="captain-slot__badge">🔵</span>
+            <div class="captain-slot__info">
+              <div class="captain-slot__name">Nessun capitano A</div>
+              <div class="captain-slot__role">Premi "Cap A" su un giocatore</div>
+            </div>
+          </div>
+          <div class="captain-slot captain-slot--b" id="captain-slot-b">
+            <span class="captain-slot__badge">🔴</span>
+            <div class="captain-slot__info">
+              <div class="captain-slot__name">Nessun capitano B</div>
+              <div class="captain-slot__role">Premi "Cap B" su un giocatore</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="matchmaker-toolbar">
         <div class="search-wrap" style="flex:1;max-width:300px">
           <span class="search-icon">🔍</span>
@@ -38,7 +266,7 @@
         <button id="btn-clear-sel"  class="btn btn--secondary btn--sm">✕ Azzera</button>
       </div>
       <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.75rem">
-        Ordinati per partite giocate. Seleziona un numero <strong>pari ≥ 10</strong>.
+        Ordinati per partite. Seleziona un numero <strong>pari ≥ 10</strong>. I capitani vanno in squadre diverse e l'algoritmo costruisce attorno a loro.
       </p>
       <div id="player-checkbox-list" class="matchmaker-list"></div>
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem">
@@ -47,15 +275,59 @@
       </div>
     </section>
 
-    <!-- Result -->
+    <!-- STEP 2: Teams editor -->
     <section id="teams-section" class="section hidden">
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem">
-        <h2 style="margin:0">🏟️ Squadre</h2>
-        <span id="sa-energy" style="font-size:.78rem;color:var(--text-muted);font-family:monospace"></span>
+      <!-- Toolbar -->
+      <div class="teams-editor-toolbar">
+        <span style="font-weight:700;font-size:.95rem">🏟️ Squadre</span>
+        <span id="sa-energy" style="font-size:.72rem;color:var(--text-muted);font-family:monospace"></span>
+        <div class="spacer"></div>
+        <button id="btn-reset-teams" class="btn btn--secondary">↺ Reset</button>
+        <button id="btn-regen"       class="btn btn--secondary">🔄 Rigenera</button>
+        <a href="/report.html" id="btn-confirm" class="btn btn--success">✅ Conferma →</a>
       </div>
 
+      <!-- Balance meter -->
+      <div class="balance-meter">
+        <div class="balance-meter__header">
+          <span class="balance-meter__label">⚖️ Bilanciamento</span>
+          <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+            <span id="swap-delta-badge" class="swap-delta swap-delta--same" style="display:none"></span>
+            <span id="balance-verdict" class="balance-verdict balance-verdict--ok">–</span>
+          </div>
+        </div>
+        <div class="balance-bar-wrap">
+          <span class="balance-team-label balance-team-label--a">🔵 <strong id="str-a-bal">–</strong></span>
+          <div class="balance-track">
+            <div class="balance-fill-a" id="balance-fill-a" style="width:50%"></div>
+            <div class="balance-fill-b" id="balance-fill-b" style="width:50%"></div>
+          </div>
+          <span class="balance-team-label balance-team-label--b"><strong id="str-b-bal">–</strong> 🔴</span>
+        </div>
+        <div class="balance-scores">
+          <span>Squadra A</span>
+          <span id="balance-diff-text">Δ forza: –</span>
+          <span>Squadra B</span>
+        </div>
+      </div>
+
+      <!-- Swap action bar -->
+      <div id="swap-action-bar" class="swap-action-bar hidden">
+        <div>
+          <div class="swap-action-bar__info" id="swap-selected-info">Selezionato: –</div>
+          <div class="swap-action-bar__sub">Seleziona un giocatore dell'altra squadra per scambiarlo, oppure annulla</div>
+        </div>
+        <button id="btn-cancel-swap" class="btn btn--secondary btn--sm">✕ Annulla</button>
+      </div>
+
+      <!-- Smart suggestions -->
+      <div id="suggestions-panel" class="suggestions-panel hidden">
+        <div class="suggestions-panel__title">💡 Scambi consigliati</div>
+        <div id="suggestions-list"></div>
+      </div>
+
+      <!-- Teams grid -->
       <div class="teams-result-grid">
-        <!-- Team A -->
         <div class="team-result-card team-result-card--a">
           <div class="team-result-header">
             <span>🔵 Squadra A</span>
@@ -63,8 +335,6 @@
           </div>
           <div id="team-a-panel" class="team-panel"></div>
         </div>
-
-        <!-- Team B -->
         <div class="team-result-card team-result-card--b">
           <div class="team-result-header">
             <span>🔴 Squadra B</span>
@@ -74,16 +344,31 @@
         </div>
       </div>
 
+      <!-- Summary row -->
       <div class="ovr-summary" style="margin-top:1.25rem">
-        <div class="ovr-summary__item"><div class="ovr-summary__label">Squadra A</div><div class="ovr-summary__value" id="str-a-val">–</div></div>
+        <div class="ovr-summary__item">
+          <div class="ovr-summary__label">Squadra A</div>
+          <div class="ovr-summary__value" id="str-a-val">–</div>
+        </div>
         <span id="ovr-diff" class="ovr-diff ovr-diff--ok">Δ forza: –</span>
-        <div class="ovr-summary__item"><div class="ovr-summary__label">Squadra B</div><div class="ovr-summary__value" id="str-b-val">–</div></div>
-      </div>
-
-      <div style="margin-top:1.25rem">
-        <a href="/report.html" class="btn btn--success btn--lg">📊 Inserisci Risultato →</a>
+        <div class="ovr-summary__item">
+          <div class="ovr-summary__label">Squadra B</div>
+          <div class="ovr-summary__value" id="str-b-val">–</div>
+        </div>
       </div>
     </section>
+  </div>
+
+  <!-- Captain swap confirm -->
+  <div id="captain-confirm-overlay" class="swap-confirm-overlay hidden">
+    <div class="swap-confirm-box">
+      <h3>⚠️ Scambio capitano bloccato</h3>
+      <p id="captain-confirm-text">Questo giocatore è il capitano. Vuoi comunque procedere con lo scambio?</p>
+      <div class="swap-confirm-btns">
+        <button id="captain-confirm-cancel" class="btn btn--secondary">Annulla</button>
+        <button id="captain-confirm-ok"     class="btn btn--primary">Scambia comunque</button>
+      </div>
+    </div>
   </div>
 
   <div id="toast" class="toast"></div>
