@@ -120,24 +120,29 @@ async function loadHistory() {
       historyList.innerHTML = `<p class="empty-state">Nessuna partita registrata.</p>`;
       return;
     }
-
     historyList.innerHTML = matches
       .slice()
       .reverse()
       .map((m) => {
-        const date = new Date(m.date).toLocaleDateString("it-IT", {
+        // 🔥 FIX: supporta sia camelCase che snake_case
+        const scoreA = m.scoreA ?? m.score_a;
+        const scoreB = m.scoreB ?? m.score_b;
+        const dateRaw = m.date ?? m.created_at;
+    
+        const date = new Date(dateRaw).toLocaleDateString("it-IT", {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
           hour: "2-digit",
           minute: "2-digit",
         });
+    
         return `
         <div class="card history-card">
           <div class="history-card__score">
-            <span>🔵 ${m.scoreA}</span>
+            <span>🔵 ${scoreA}</span>
             <span class="history-card__vs">–</span>
-            <span>${m.scoreB} 🔴</span>
+            <span>${scoreB} 🔴</span>
           </div>
           <div class="history-card__date">${date}</div>
         </div>`;
