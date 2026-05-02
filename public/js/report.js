@@ -67,7 +67,7 @@ function renderRatingsSection() {
           if (!player) return "";
           return `
           <div class="rating-row" data-id="${player.id}">
-            <span class="rating-icon">${getRoleIcon(player.role)}</span>
+            <span class="rating-icon">${getRoleIcon(player.ruoloPreferito)}</span>
             <span class="rating-name">${player.name}</span>
             <label class="rating-field">
               Voto
@@ -160,11 +160,20 @@ async function loadHistory() {
 // Team selection (manual)
 // ─────────────────────────────────────────────
 function populateMultiSelects(players) {
-  console.log("Struttura giocatore:", players[0]);
   const opts = players
-    .sort((a, b) => b.ovr - a.ovr)
-    .map((p) => `<option value="${p.id}">${p.name} (${p.role}, OVR ${p.ovr})</option>`)
+    // Ordiniamo i giocatori in base all'OVR del loro ruolo preferito
+    .sort((a, b) => {
+      const ovrA = a.ovr[a.ruoloPreferito] || 0;
+      const ovrB = b.ovr[b.ruoloPreferito] || 0;
+      return ovrB - ovrA;
+    })
+    .map((p) => {
+      // Estraiamo l'OVR specifico per non stampare [object Object]
+      const playerOvr = p.ovr[p.ruoloPreferito] || 0;
+      return `<option value="${p.id}">${p.name} (${p.ruoloPreferito}, OVR ${playerOvr})</option>`;
+    })
     .join("");
+    
   teamASelect.innerHTML = opts;
   teamBSelect.innerHTML = opts;
 }
