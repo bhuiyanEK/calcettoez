@@ -688,14 +688,37 @@ btnClearSel.addEventListener("click",()=>{
   teamsSection.classList.add("hidden");
 });
 
-btnAutoSelect?.addEventListener("click", async ()=>{
-  try {
-    const res=await fetch("/match/autoselect").then(r=>r.json());
-    if(res.error){ showToast(res.error,"error"); return; }
-    checkedIds=new Set(res.selected);
-    renderList(); updateCounter();
-    showToast(`${res.count} giocatori selezionati!`);
-  } catch(err){ showToast(err.message,"error"); }
+btnAutoSelect?.addEventListener("click", () => {
+  // 1. Filtriamo i giocatori (escludiamo solo gli infortunati)
+  const availablePlayers = allPlayers.filter(p => p.formaAttuale !== "infortunato");
+
+  if (availablePlayers.length === 0) {
+    showToast("Nessun giocatore disponibile!", "error");
+    return;
+  }
+
+  // 2. Puliamo la selezione precedente
+  checkedIds.clear();
+  captainA = null;
+  captainB = null;
+
+  // 3. Ordiniamo per partite giocate (decrescente).
+  // Mettiamo un limite di 10 (o il numero massimo che vuoi pre-selezionare).
+  // Se ce ne sono di meno (es. 4), prenderà semplicemente quelli.
+  const topPlayers = availablePlayers
+    .sort((a, b) => b.storico.partite - a.storico.partite)
+    .slice(0, 10); 
+
+  // 4. Aggiungiamo i giocatori trovati alla selezione
+  topPlayers.forEach(p => checkedIds.add(p.id));
+
+  // 5. Aggiorniamo l'interfaccia
+  renderCaptainSlot("a", null); 
+  renderCaptainSlot("b", null);
+  renderList(); 
+  updateCounter();
+  
+  showToast(`${topPlayers.length} giocatori auto-selezionati!`);
 });
 
 searchInput.addEventListener("input", renderList);
