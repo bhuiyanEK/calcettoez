@@ -6,160 +6,21 @@
   <title>Report Partita – FantaCalcetto</title>
   <link rel="stylesheet" href="/css/style.css" />
   <style>
-    /* ── Match history cards ── */
+    /* Rende le card dello storico visibilmente cliccabili */
     .history-card {
       cursor: pointer;
-      transition: border-color var(--transition), transform var(--transition);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
     .history-card:hover {
-      border-color: var(--accent);
       transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-color: #007bff; /* Usa il colore primario se definito */
     }
-    .history-card__meta {
-      font-size: .75rem;
-      color: var(--text-muted);
-      margin-top: .3rem;
-    }
-
-    /* ── Match detail panel ── */
-    .match-detail-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.6);
-      z-index: 200;
+    .btn-group {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-      backdrop-filter: blur(4px);
-    }
-    .match-detail-overlay.hidden { display: none; }
-
-    .match-detail-box {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      width: 100%;
-      max-width: 700px;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 1.75rem 2rem;
-      position: relative;
-    }
-
-    .match-detail-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: .75rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .match-detail-score {
-      display: flex;
-      align-items: center;
       gap: 1rem;
-      font-size: 2rem;
-      font-weight: 800;
-    }
-
-    .match-detail-vs { color: var(--text-muted); font-size: 1.2rem; }
-
-    .btn-close {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      font-size: 1rem;
-      cursor: pointer;
-      color: var(--text-secondary);
-      display: flex;
       align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
     }
-    .btn-close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-
-    /* Player rows in detail */
-    .detail-team-title {
-      font-size: .8rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: .07em;
-      margin: 1.1rem 0 .6rem;
-    }
-
-    .detail-player-row {
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-      padding: .55rem .75rem;
-      background: var(--bg-elevated);
-      border-radius: var(--radius-sm);
-      margin-bottom: .35rem;
-      flex-wrap: wrap;
-    }
-
-    .detail-player-nick { flex: 1; font-weight: 600; font-size: .9rem; min-width: 80px; }
-
-    .detail-stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: .1rem;
-      min-width: 44px;
-    }
-    .detail-stat__label { font-size: .65rem; color: var(--text-muted); text-transform: uppercase; }
-    .detail-stat__value { font-size: .95rem; font-weight: 700; }
-
-    .detail-stat__value--vote {
-      color: var(--accent);
-    }
-    .detail-stat__value--vote.high { color: var(--success); }
-    .detail-stat__value--vote.low  { color: var(--danger); }
-
-    /* Editable inputs in detail */
-    .detail-input {
-      width: 54px;
-      text-align: center;
-      padding: .25rem .3rem;
-      font-size: .88rem;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text-primary);
-      font-family: inherit;
-    }
-    .detail-input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-glow);
-    }
-
-    .detail-actions {
-      display: flex;
-      gap: .75rem;
-      margin-top: 1.5rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-
-    /* Editing mode indicator */
-    .editing-banner {
-      background: rgba(61,126,255,.12);
-      border: 1px solid var(--border-accent);
-      border-radius: var(--radius-sm);
-      padding: .6rem 1rem;
-      font-size: .85rem;
-      color: var(--accent);
-      margin-bottom: 1rem;
-      display: none;
-    }
-    .editing-banner.show { display: block; }
   </style>
 </head>
 <body>
@@ -178,20 +39,23 @@
     <div class="page-header">
       <div>
         <h1 class="page-header__title">📊 Report Partita</h1>
-        <p class="page-header__sub">Inserisci risultato, voti e statistiche. I giocatori evolvono automaticamente.</p>
+        <p class="page-header__sub">Inserisci risultato, voti e statistiche. Clicca su una partita nello storico per visualizzarla o modificarla.</p>
       </div>
     </div>
 
-    <!-- ── Setup squadre ── -->
     <section class="section">
       <h2 class="section__title">Setup Squadre</h2>
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
-        <button id="btn-load-teams" class="btn btn--primary">⚡ Carica dal Matchmaker</button>
-        <button id="btn-manual-setup" class="btn btn--secondary">✏️ Seleziona manualmente</button>
+        <button id="btn-load-teams" class="btn btn--primary">
+          ⚡ Carica dal Matchmaker
+        </button>
+        <button id="btn-manual-setup" class="btn btn--secondary">
+          ✏️ Seleziona manualmente
+        </button>
       </div>
 
       <div id="player-select-section" class="card hidden" style="margin-top:1rem">
-        <h3 style="margin-bottom:1rem">Seleziona i giocatori per squadra (Ctrl+click per selezione multipla)</h3>
+        <h3 style="margin-bottom:1rem">Seleziona 5 giocatori per squadra (Ctrl+click per selezione multipla)</h3>
         <div class="team-selects">
           <div class="form-group">
             <label>🔵 Squadra A</label>
@@ -206,15 +70,29 @@
       </div>
     </section>
 
-    <!-- ── Report Form ── -->
     <section id="report-form" class="section hidden">
+
       <div class="card" style="margin-bottom:1.5rem">
         <h2 style="margin-bottom:1rem">🏆 Risultato</h2>
         <div class="score-row">
           <span class="score-row__label">🔵 Squadra A</span>
-          <input id="score-a" class="input score-input" type="number" min="0" value="0"/>
+          <input
+            id="score-a"
+            class="input score-input"
+            type="number"
+            min="0"
+            value="0"
+            placeholder="0"
+          />
           <span class="score-vs">–</span>
-          <input id="score-b" class="input score-input" type="number" min="0" value="0"/>
+          <input
+            id="score-b"
+            class="input score-input"
+            type="number"
+            min="0"
+            value="0"
+            placeholder="0"
+          />
           <span class="score-row__label">Squadra B 🔴</span>
         </div>
       </div>
@@ -229,51 +107,26 @@
         </div>
       </div>
 
-      <button id="btn-submit-report" class="btn btn--success btn--lg">💾 Salva Report</button>
+      <div class="btn-group">
+        <button id="btn-submit-report" class="btn btn--success btn--lg">
+          💾 Salva Report
+        </button>
+        <button id="btn-cancel-edit" class="btn btn--secondary btn--lg hidden">
+          ❌ Annulla
+        </button>
+      </div>
     </section>
 
-    <!-- ── History ── -->
     <section class="section">
       <h2 class="section__title">📅 Storico Partite</h2>
-      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:.9rem">
-        Clicca su una partita per vedere il dettaglio e modificarla.
-      </p>
       <div id="history-list" class="history-grid">
         <p class="empty-state">Caricamento...</p>
       </div>
     </section>
   </div>
 
-  <!-- ── Match detail overlay ── -->
-  <div id="match-detail-overlay" class="match-detail-overlay hidden">
-    <div class="match-detail-box">
-      <div class="match-detail-header">
-        <div>
-          <div class="match-detail-score">
-            <span id="detail-score-a-display">0</span>
-            <span class="match-detail-vs">–</span>
-            <span id="detail-score-b-display">0</span>
-          </div>
-          <div id="detail-date" style="font-size:.8rem;color:var(--text-muted);margin-top:.3rem"></div>
-        </div>
-        <button class="btn-close" id="btn-close-detail">✕</button>
-      </div>
-
-      <div id="editing-banner" class="editing-banner">
-        ✏️ Modalità modifica attiva — cambia i valori e premi "Salva modifiche"
-      </div>
-
-      <div id="detail-content"></div>
-
-      <div class="detail-actions">
-        <button id="btn-edit-match"   class="btn btn--secondary">✏️ Modifica</button>
-        <button id="btn-save-match"   class="btn btn--success hidden">💾 Salva modifiche</button>
-        <button id="btn-cancel-edit"  class="btn btn--secondary hidden">✕ Annulla</button>
-      </div>
-    </div>
-  </div>
-
   <div id="toast" class="toast"></div>
+
   <script type="module" src="/js/report.js"></script>
 </body>
 </html>
