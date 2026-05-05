@@ -24,22 +24,23 @@ app.post("/__login", loginHandler);
 // Constants
 // ─────────────────────────────────────────────
 const ROLE_WEIGHTS = {
-  portiere:       { velocita:.10, tiro:.05, passaggio:.15, difesa:.45, fisico:.20, dribbling:.05 },
-  difensore:      { velocita:.15, tiro:.05, passaggio:.15, difesa:.35, fisico:.20, dribbling:.10 },
-  centrocampista: { velocita:.15, tiro:.15, passaggio:.25, difesa:.15, fisico:.15, dribbling:.15 },
-  attaccante:     { velocita:.20, tiro:.30, passaggio:.10, difesa:.05, fisico:.15, dribbling:.20 },
+  // porta + passaggio dominano l'OVR portiere (capacità di parare + costruzione dal basso)
+  portiere:       { velocita:.04, tiro:.02, passaggio:.20, difesa:.09, fisico:.08, dribbling:.02, porta:.55 },
+  difensore:      { velocita:.15, tiro:.05, passaggio:.15, difesa:.35, fisico:.20, dribbling:.10, porta:.00 },
+  centrocampista: { velocita:.15, tiro:.15, passaggio:.25, difesa:.15, fisico:.15, dribbling:.15, porta:.00 },
+  attaccante:     { velocita:.20, tiro:.30, passaggio:.10, difesa:.05, fisico:.15, dribbling:.20, porta:.00 },
 };
 const ROLE_STAT_BIAS = {
-  portiere:       { velocita:-.5, tiro:-1.5, passaggio:0,   difesa:+2,  fisico:+.5, dribbling:-1.5 },
-  difensore:      { velocita:0,   tiro:-.5,  passaggio:0,   difesa:+1.5,fisico:+.5, dribbling:-.5  },
-  centrocampista: { velocita:0,   tiro:0,    passaggio:+1,  difesa:0,   fisico:0,   dribbling:+.5  },
-  attaccante:     { velocita:+1,  tiro:+1.5, passaggio:-.5, difesa:-1.5,fisico:0,   dribbling:+1   },
+  portiere:       { velocita:-.5, tiro:-1.5, passaggio:+.5, difesa:+.5, fisico:+.5, dribbling:-1.5, porta:+2.5 },
+  difensore:      { velocita:0,   tiro:-.5,  passaggio:0,   difesa:+1.5,fisico:+.5, dribbling:-.5,  porta:0    },
+  centrocampista: { velocita:0,   tiro:0,    passaggio:+1,  difesa:0,   fisico:0,   dribbling:+.5,  porta:0    },
+  attaccante:     { velocita:+1,  tiro:+1.5, passaggio:-.5, difesa:-1.5,fisico:0,   dribbling:+1,   porta:-1.5 },
 };
 const LIVELLO_BASE = { scarso:3.5, discreto:5.0, buono:6.5, ottimo:8.0, fenomeno:9.5 };
 const FORMA_DELTA  = { infortunato:-2.5, scarsa_forma:-1.0, normale:0.0, in_forma:+1.0, grande_forma:+2.0 };
 const VALID_ROLES  = Object.keys(ROLE_WEIGHTS);
 const VALID_FORMA  = Object.keys(FORMA_DELTA);
-const STAT_KEYS    = ["velocita","tiro","passaggio","difesa","fisico","dribbling"];
+const STAT_KEYS    = ["velocita","tiro","passaggio","difesa","fisico","dribbling","porta"];
 const FORMATION    = ["portiere","difensore","centrocampista","centrocampista","attaccante"];
 
 // ─────────────────────────────────────────────
@@ -268,7 +269,7 @@ app.post("/players/import", async (req,res) => {
 });
 
 app.get("/players/template",(_,res)=>{
-  const rows=["name,nickname,ruolo_preferito,spirito_sacrificio,sconosciuto,livello,velocita,tiro,passaggio,difesa,fisico,dribbling","Marco Rossi,Rozzo,attaccante,7,false,,8,8.5,7,5.5,7.5,8.5","Nuovo Tizio,Tigre,centrocampista,6,true,buono,,,,,,"];
+  const rows=["name,nickname,ruolo_preferito,spirito_sacrificio,sconosciuto,livello,velocita,tiro,passaggio,difesa,fisico,dribbling,porta","Marco Rossi,Rozzo,attaccante,7,false,,8,8.5,7,5.5,7.5,8.5,4","Nuovo Tizio,Tigre,centrocampista,6,true,buono,,,,,,,","Franco Bianchi,Bomber,portiere,5,false,,5,4,7,6,7,4,8"];
   res.setHeader("Content-Type","text/csv;charset=utf-8");res.setHeader("Content-Disposition",'attachment;filename="giocatori_template.csv"');res.send(rows.join("\n"));
 });
 
