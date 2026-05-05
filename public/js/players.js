@@ -35,6 +35,7 @@ const statInputs = {
   difesa:     document.getElementById("f-difesa"),
   fisico:     document.getElementById("f-fisico"),
   dribbling:  document.getElementById("f-dribbling"),
+  porta:      document.getElementById("f-porta"),
 };
 
 const ovrPreviews = {
@@ -160,8 +161,8 @@ function renderPlayers(list) {
 
       ${!p.isUnknown ? `
       <div class="player-card__stats">
-        ${["velocita","tiro","passaggio","difesa","fisico","dribbling"].map(k =>
-          renderStatBar(k.slice(0,3).toUpperCase(), p.stats[k])).join("")}
+        ${["velocita","tiro","passaggio","difesa","fisico","dribbling","porta"].map(k =>
+          renderStatBar(k==="porta"?"POR":k.slice(0,3).toUpperCase(), p.stats[k])).join("")}
       </div>` : `<p class="unknown-hint">📝 Stats stimate dal livello — si aggiornano dopo le partite</p>`}
 
       <div class="player-card__storico">
