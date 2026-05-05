@@ -728,12 +728,7 @@ select[multiple].input option {
   justify-content: center;
 }
 
-/* ── Team player card (updated) ── */
-.tpc-assigned-role { font-size: 1.4rem; flex-shrink: 0; }
-.tpc-role-label    { font-size: .72rem; color: var(--text-muted); text-transform: capitalize; }
-.tpc-ovrs          { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; }
-.tpc-ovr-assigned  { font-size: 1rem; font-weight: 800; color: var(--accent); }
-.tpc-preferred     { font-size: .7rem; color: var(--warning); }
+/* tpc-* moved to team-panel section below */
 
 /* ── Forma badges ── */
 .forma-badge {
@@ -922,14 +917,115 @@ select[multiple].input option {
 
 .team-result-header { display:flex; justify-content:space-between; align-items:center; padding:.85rem 1.1rem; border-bottom:1px solid var(--border); font-weight:700; font-size:.95rem; }
 
-.team-panel { display:flex; gap:0; }
-.formation-wrap { flex:0 0 160px; padding:.75rem .5rem; }
-.team-list-side { flex:1; padding:.75rem .9rem; overflow:auto; }
+/* ── Team panel: stacked layout (selector → SVG → list) ── */
+.team-panel { display:flex; flex-direction:column; gap:0; }
 
-.formation-svg { width:100%; height:auto; border-radius:6px; }
+/* Formation module selector */
+.formation-selector {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.formation-selector__label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+.formation-select-ctrl {
+  font-size: .82rem;
+  padding: .3rem .6rem;
+  min-width: 100px;
+}
+
+/* Formation SVG – big, fills the card width */
+.formation-wrap {
+  width: 100%;
+  padding: .75rem 1rem;
+  display: flex;
+  justify-content: center;
+  background: rgba(0,0,0,.18);
+}
+.formation-svg {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+}
+
+/* Player list below the SVG */
+.team-list-below {
+  padding: .6rem .9rem;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+/* ── Team player card (in the list) ── */
+.team-player-card {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .45rem .6rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  user-select: none;
+}
+.team-player-card:hover           { background: var(--bg-hover); border-color: var(--border-accent); }
+.team-player-card.selected        { border-color: var(--accent); background: rgba(61,126,255,.12); }
+.team-player-card.is-captain      { border-color: #ffd700; background: rgba(255,215,0,.07); }
+.team-player-card.team-player-card--diff { border-left: 3px solid var(--warning); }
+.team-player-card.locked          { opacity: .8; cursor: default; }
+.team-player-card.dragging        { opacity: .5; }
+.team-player-card.drag-over       { border-color: var(--success); background: rgba(45,204,136,.1); }
+
+.tpc-assigned-role  { font-size: 1.25rem; flex-shrink: 0; }
+.tpc-info           { flex: 1; display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.tpc-name           { font-size: .88rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tpc-role-row       { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.tpc-out-badge      { font-size: .65rem; color: var(--warning); font-weight: 600; white-space: nowrap; }
+.tpc-right          { display: flex; flex-direction: column; align-items: flex-end; gap: .15rem; flex-shrink: 0; }
+.tpc-ovr-assigned   { font-size: .95rem; font-weight: 800; color: var(--accent); }
+
+/* Role override select (compact) */
+.input--xs {
+  font-size: .68rem;
+  padding: .18rem .35rem;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: var(--bg-base);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  max-width: 150px;
+}
+.input--xs:hover { border-color: var(--border-accent); }
+
+/* Lock button */
+.lock-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: .15rem;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: .6;
+  transition: opacity var(--transition);
+}
+.lock-btn:hover   { opacity: 1; }
+.lock-btn.locked  { opacity: 1; }
 
 @media(max-width:480px){
-  .team-panel       { flex-direction:column; }
-  .formation-wrap   { flex:none; padding:.5rem; }
-  .formation-svg    { max-height:220px; }
+  .formation-svg    { max-width: 100%; }
+  .formation-selector { gap: .4rem; }
 }
