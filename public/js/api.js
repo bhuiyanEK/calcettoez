@@ -27,8 +27,10 @@ export const MatchAPI = {
 };
 
 export const ReportAPI = {
-  save:          (payload)  => request("POST", "/report", payload),
-  getHistory:    ()         => request("GET",  "/matches"),
+  save:          (payload)  => request("POST",   "/report",        payload),
+  getHistory:    ()         => request("GET",    "/matches"),
+  update:        (id, p)    => request("PUT",    `/matches/${id}`, p),
+  remove:        (id)       => request("DELETE", `/matches/${id}`),
 };
 
 export const MetaAPI = {
