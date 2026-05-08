@@ -98,7 +98,17 @@ function computeAutoForma(playerId, matches) {
     .filter(m=>[...(m.team_a||[]),...(m.team_b||[])].includes(playerId))
     .slice(-2);
   if (!recent.length) return "normale";
-  const votes = recent.map(m=>Number(m.ratings?.[playerId])).filter(Boolean);
+  // Supporta sia formato legacy (numero) sia nuovo formato { porta, difesa, attacco }
+  const votes = recent.map(m => {
+    const r = m.ratings?.[playerId];
+    if (!r) return null;
+    if (typeof r === "number") return r;
+    if (typeof r === "object") {
+      const vals = [r.difesa, r.attacco, r.porta].filter(v => v !== null && v !== undefined && !isNaN(Number(v))).map(Number);
+      return vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+    }
+    return null;
+  }).filter(Boolean);
   if (!votes.length) return "normale";
   const avg = votes.reduce((s,v)=>s+v,0)/votes.length;
   return avg>=7.5?"in_forma":avg<5.0?"scarsa_forma":"normale";
@@ -359,6 +369,45 @@ app.post("/match",async(req,res)=>{
 });
 
 // ─────────────────────────────────────────────
+// HELPER: mappa i 3 voti alle stats
+// ─────────────────────────────────────────────
+/**
+ * Dato il rating oggetto { porta, difesa, attacco } (porta può essere null)
+ * restituisce il delta da applicare per ciascuna stat.
+ *
+ * Mappatura:
+ *  - porta   → stat "porta"
+ *  - difesa  → stat "difesa", "fisico"
+ *  - attacco → stat "tiro", "passaggio", "dribbling", "velocita"
+ *
+ * Soglie: voto > 7.5 → +0.2 | voto < 5 → -0.2 | 5-7.5 → 0
+ */
+function ratingsToStatDeltas(ratingObj) {
+  const d = v => v === null || v === undefined ? 0 : (v > 7.5 ? 0.2 : v < 5 ? -0.2 : 0);
+  const dp = d(ratingObj.porta);
+  const dd = d(ratingObj.difesa);
+  const da = d(ratingObj.attacco);
+  return {
+    porta:     dp,
+    difesa:    dd,
+    fisico:    dd,
+    tiro:      da,
+    passaggio: da,
+    dribbling: da,
+    velocita:  da,
+  };
+}
+
+// Media dei voti (porta esclusa se null) — usata per mediaVoto storico e forma
+function avgRating(ratingObj) {
+  const vals = [ratingObj.difesa, ratingObj.attacco, ratingObj.porta]
+    .filter(v => v !== null && v !== undefined && !isNaN(Number(v)))
+    .map(Number);
+  if (!vals.length) return 0;
+  return Math.round((vals.reduce((s,v) => s+v, 0) / vals.length) * 10) / 10;
+}
+
+// ─────────────────────────────────────────────
 // REPORT
 // ─────────────────────────────────────────────
 app.post("/report",async(req,res)=>{
@@ -373,19 +422,36 @@ app.post("/report",async(req,res)=>{
     const updates=[];
     for(const row of playerRows){
       const p=toPlayer(row);
-      const rating=Number(ratings[p.id]);
-      if(!rating||rating<1||rating>10)return res.status(400).json({error:`Voto non valido per "${p.nickname}".`});
+      const rObj=ratings[p.id];
 
-      const{partite:pp,mediaVoto:pm}=p.storico;const np=pp+1;
+      // Accetta sia nuovo formato { porta, difesa, attacco } sia legacy numerico
+      const isLegacy = typeof rObj === "number";
+      const ratingObj = isLegacy
+        ? { porta: null, difesa: rObj, attacco: rObj }
+        : rObj;
+
+      if(!ratingObj || typeof ratingObj.difesa !== "number" || ratingObj.difesa < 1 || ratingObj.difesa > 10)
+        return res.status(400).json({error:`Voto Difesa non valido per "${p.nickname}".`});
+      if(typeof ratingObj.attacco !== "number" || ratingObj.attacco < 1 || ratingObj.attacco > 10)
+        return res.status(400).json({error:`Voto Attacco non valido per "${p.nickname}".`});
+      if(ratingObj.porta !== null && ratingObj.porta !== undefined &&
+         (ratingObj.porta < 1 || ratingObj.porta > 10))
+        return res.status(400).json({error:`Voto Porta non valido per "${p.nickname}".`});
+
+      const media = avgRating(ratingObj);
+      const{partite:pp,mediaVoto:pm}=p.storico; const np=pp+1;
       const newStorico={
         partite:np,
         goal:p.storico.goal+(Number(goals?.[p.id])||0),
         assist:p.storico.assist+(Number(assists?.[p.id])||0),
-        mediaVoto:Math.round(((pm*pp+rating)/np)*10)/10,
+        mediaVoto:Math.round(((pm*pp+media)/np)*10)/10,
       };
-      let newStats={...p.stats};
-      let delta=0;if(rating>7.5)delta=0.2;else if(rating<5)delta=-0.2;
-      if(delta!==0){for(const k of STAT_KEYS)newStats[k]=clamp(newStats[k]+delta);}
+
+      // Applica delta specifici per stat
+      const deltas = ratingsToStatDeltas(ratingObj);
+      let newStats = {...p.stats};
+      for(const k of STAT_KEYS) newStats[k] = clamp(newStats[k] + (deltas[k] || 0));
+
       const newIsUnknown=p.isUnknown&&np>=3?false:p.isUnknown;
       updates.push({id:p.id,stats:newStats,ovr:calcAllOVR(newStats),storico:newStorico,is_unknown:newIsUnknown});
     }
@@ -432,6 +498,38 @@ app.post("/report",async(req,res)=>{
     }
 
     res.json({message:"Report salvato.",newSuggestions:newSuggs.length});
+  }catch(err){res.status(500).json({error:err.message});}
+});
+
+// ─────────────────────────────────────────────
+// UPDATE MATCH (PUT /matches/:id)
+// ─────────────────────────────────────────────
+app.put("/matches/:id",async(req,res)=>{
+  try{
+    const{id}=req.params;
+    const{scoreA,scoreB,teamA,teamB,ratings,goals,assists}=req.body;
+    if(!id||scoreA===undefined||scoreB===undefined||!Array.isArray(teamA)||!Array.isArray(teamB))
+      return res.status(400).json({error:"Dati incompleti."});
+
+    check(await db.from("matches").update({
+      score_a:scoreA,score_b:scoreB,
+      team_a:teamA,team_b:teamB,
+      ratings,goals:goals||{},assists:assists||{},
+    }).eq("id",id));
+
+    res.json({message:"Partita aggiornata."});
+  }catch(err){res.status(500).json({error:err.message});}
+});
+
+// ─────────────────────────────────────────────
+// DELETE MATCH (DELETE /matches/:id)
+// ─────────────────────────────────────────────
+app.delete("/matches/:id",async(req,res)=>{
+  try{
+    const{id}=req.params;
+    if(!id)return res.status(400).json({error:"ID mancante."});
+    check(await db.from("matches").delete().eq("id",id));
+    res.json({message:"Partita eliminata."});
   }catch(err){res.status(500).json({error:err.message});}
 });
 
