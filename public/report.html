@@ -100,7 +100,10 @@
       <div class="card" style="margin-bottom:1.5rem">
         <h2 style="margin-bottom:.5rem">⭐ Voti, Goal & Assist</h2>
         <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.25rem">
-          Voto &gt; 7.5 → +0.2 alle stats &nbsp;|&nbsp; Voto &lt; 5 → -0.2 alle stats
+          <strong>🧤 Porta</strong> (facoltativo) → influenza la stat <em>porta</em><br>
+          <strong>🛡️ Difesa</strong> (obbligatorio) → influenza <em>difesa</em> e <em>fisico</em><br>
+          <strong>⚽ Attacco</strong> (obbligatorio) → influenza <em>tiro</em>, <em>passaggio</em>, <em>dribbling</em> e <em>velocità</em><br>
+          <span style="opacity:.7">Voto &gt; 7.5 → +0.2 &nbsp;|&nbsp; Voto &lt; 5 → -0.2 &nbsp;|&nbsp; 5–7.5 → nessuna variazione</span>
         </p>
         <div id="ratings-section">
           <p class="empty-state">Configura le squadre per inserire i dati.</p>
@@ -119,6 +122,15 @@
 
     <section class="section">
       <h2 class="section__title">📅 Storico Partite</h2>
+      <div style="margin-bottom:1rem">
+        <input
+          id="history-search"
+          class="input"
+          type="text"
+          placeholder="🔍 Cerca per data (es. 05/2026 o 08/05/2026)..."
+          style="max-width:360px"
+        />
+      </div>
       <div id="history-list" class="history-grid">
         <p class="empty-state">Caricamento...</p>
       </div>
