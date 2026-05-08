@@ -6,31 +6,32 @@ import { PlayersAPI, ReportAPI } from "./api.js";
 // ─────────────────────────────────────────────
 // DOM refs
 // ─────────────────────────────────────────────
-const btnLoadTeams = document.getElementById("btn-load-teams");
-const btnManualSetup = document.getElementById("btn-manual-setup");
+const btnLoadTeams        = document.getElementById("btn-load-teams");
+const btnManualSetup      = document.getElementById("btn-manual-setup");
 const playerSelectSection = document.getElementById("player-select-section");
-const teamASelect = document.getElementById("team-a-select");
-const teamBSelect = document.getElementById("team-b-select");
-const btnConfirmTeams = document.getElementById("btn-confirm-teams");
+const teamASelect         = document.getElementById("team-a-select");
+const teamBSelect         = document.getElementById("team-b-select");
+const btnConfirmTeams     = document.getElementById("btn-confirm-teams");
 
-const reportForm = document.getElementById("report-form");
-const scoreAInput = document.getElementById("score-a");
-const scoreBInput = document.getElementById("score-b");
+const reportForm     = document.getElementById("report-form");
+const scoreAInput    = document.getElementById("score-a");
+const scoreBInput    = document.getElementById("score-b");
 const ratingsSection = document.getElementById("ratings-section");
 
 const btnSubmitReport = document.getElementById("btn-submit-report");
-const btnCancelEdit = document.getElementById("btn-cancel-edit");
-const toast = document.getElementById("toast");
-const historyList = document.getElementById("history-list");
+const btnCancelEdit   = document.getElementById("btn-cancel-edit");
+const toast           = document.getElementById("toast");
+const historyList     = document.getElementById("history-list");
+const searchInput     = document.getElementById("history-search");
 
 // ─────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────
-let teamA = [];
-let teamB = [];
-let allPlayers = [];
-let matchHistory = []; // Salva lo storico in memoria
-let editingMatchId = null; // Memorizza l'ID della partita in modifica
+let teamA          = [];
+let teamB          = [];
+let allPlayers     = [];
+let matchHistory   = [];   // storico completo in memoria
+let editingMatchId = null; // ID partita in modifica
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -63,7 +64,7 @@ function resetForm() {
 }
 
 // ─────────────────────────────────────────────
-// Render ratings rows
+// Render ratings rows  ← 3 voti distinti
 // ─────────────────────────────────────────────
 function renderRatingsSection() {
   const allSelected = [...teamA, ...teamB];
@@ -72,7 +73,7 @@ function renderRatingsSection() {
     return;
   }
 
-  const makeTeamBlock = (players, label, side) => `
+  const makeTeamBlock = (players, label) => `
     <div class="ratings-team">
       <h4 class="ratings-team__title">${label}</h4>
       ${players
@@ -83,18 +84,44 @@ function renderRatingsSection() {
           <div class="rating-row" data-id="${player.id}">
             <span class="rating-icon">${getRoleIcon(player.ruoloPreferito)}</span>
             <span class="rating-name">${player.name}</span>
+
             <label class="rating-field">
-              Voto
+              🧤 Porta
               <input
                 type="number"
-                class="input input--sm rating-input"
-                data-field="rating"
+                class="input input--sm rating-input--porta"
+                data-field="porta"
+                data-player="${player.id}"
+                min="1" max="10" step="0.5"
+                placeholder="sv"
+                title="Lascia vuoto se non ha giocato in porta"
+              />
+            </label>
+
+            <label class="rating-field">
+              🛡️ Difesa
+              <input
+                type="number"
+                class="input input--sm rating-input--difesa"
+                data-field="difesa"
                 data-player="${player.id}"
                 min="1" max="10" step="0.5"
                 placeholder="1–10"
-                required
               />
             </label>
+
+            <label class="rating-field">
+              ⚽ Attacco
+              <input
+                type="number"
+                class="input input--sm rating-input--attacco"
+                data-field="attacco"
+                data-player="${player.id}"
+                min="1" max="10" step="0.5"
+                placeholder="1–10"
+              />
+            </label>
+
             <label class="rating-field">
               ⚽ Goal
               <input
@@ -105,6 +132,7 @@ function renderRatingsSection() {
                 min="0" value="0"
               />
             </label>
+
             <label class="rating-field">
               🎯 Assist
               <input
@@ -121,64 +149,117 @@ function renderRatingsSection() {
     </div>`;
 
   ratingsSection.innerHTML =
-    makeTeamBlock(teamA, "🔵 Squadra A", "a") +
-    makeTeamBlock(teamB, "🔴 Squadra B", "b");
+    makeTeamBlock(teamA, "🔵 Squadra A") +
+    makeTeamBlock(teamB, "🔴 Squadra B");
 }
 
 // ─────────────────────────────────────────────
-// History
+// History rendering  ← con pulsante elimina
 // ─────────────────────────────────────────────
+function renderHistory(matches) {
+  if (matches.length === 0) {
+    historyList.innerHTML = `<p class="empty-state">Nessuna partita trovata.</p>`;
+    return;
+  }
+
+  historyList.innerHTML = matches
+    .map((m) => {
+      const scoreA  = m.scoreA ?? m.score_a ?? 0;
+      const scoreB  = m.scoreB ?? m.score_b ?? 0;
+      const dateRaw = m.date ?? m.created_at;
+      const matchId = m.id ?? m._id;
+
+      const dateStr = new Date(dateRaw).toLocaleDateString("it-IT", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+
+      return `
+      <div class="card history-card" data-match-id="${matchId}" title="Clicca per visualizzare/modificare">
+        <div class="history-card__score">
+          <span>🔵 ${scoreA}</span>
+          <span class="history-card__vs">–</span>
+          <span>${scoreB} 🔴</span>
+        </div>
+        <div class="history-card__date">${dateStr}</div>
+        <button
+          class="btn btn--danger btn--sm history-card__delete"
+          data-match-id="${matchId}"
+          title="Elimina partita"
+          style="margin-top:.5rem"
+        >🗑️ Elimina</button>
+      </div>`;
+    })
+    .join("");
+
+  // click su card → modifica
+  document.querySelectorAll(".history-card").forEach((card) => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".history-card__delete")) return;
+      editMatch(card.dataset.matchId);
+    });
+  });
+
+  // click su elimina
+  document.querySelectorAll(".history-card__delete").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteMatch(btn.dataset.matchId);
+    });
+  });
+}
+
 async function loadHistory() {
   try {
     const matches = await ReportAPI.getHistory();
-    matchHistory = matches; // Salviamo nello state
-
-    if (matches.length === 0) {
-      historyList.innerHTML = `<p class="empty-state">Nessuna partita registrata.</p>`;
-      return;
-    }
-
-    historyList.innerHTML = matches
-      .slice()
-      .reverse()
-      .map((m) => {
-        const scoreA = m.scoreA ?? m.score_a ?? 0;
-        const scoreB = m.scoreB ?? m.score_b ?? 0;
-        const dateRaw = m.date ?? m.created_at;
-        const matchId = m.id ?? m._id;
-
-        const date = new Date(dateRaw).toLocaleDateString("it-IT", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-
-        return `
-        <div class="card history-card" data-match-id="${matchId}" title="Clicca per visualizzare/modificare">
-          <div class="history-card__score">
-            <span>🔵 ${scoreA}</span>
-            <span class="history-card__vs">–</span>
-            <span>${scoreB} 🔴</span>
-          </div>
-          <div class="history-card__date">${date}</div>
-        </div>`;
-      })
-      .join("");
-
-    // Aggiungiamo i listener per la modalità Edit
-    document.querySelectorAll(".history-card").forEach((card) => {
-      card.addEventListener("click", () => editMatch(card.dataset.matchId));
-    });
-
+    matchHistory = matches;
+    applySearch();
   } catch (err) {
     historyList.innerHTML = `<p class="empty-state">Errore nel caricamento.</p>`;
   }
 }
 
+// Filtra per data e ridisegna
+function applySearch() {
+  const query    = (searchInput?.value ?? "").trim().toLowerCase();
+  const reversed = [...matchHistory].reverse();
+
+  if (!query) {
+    renderHistory(reversed);
+    return;
+  }
+
+  const filtered = reversed.filter((m) => {
+    const dateRaw = m.date ?? m.created_at ?? "";
+    const dateStr = new Date(dateRaw)
+      .toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" })
+      .toLowerCase();
+    return dateStr.includes(query);
+  });
+
+  renderHistory(filtered);
+}
+
 // ─────────────────────────────────────────────
-// View / Edit Match
+// Delete match
+// ─────────────────────────────────────────────
+async function deleteMatch(matchId) {
+  if (!confirm(
+    "Vuoi davvero eliminare questa partita?\n" +
+    "Attenzione: le statistiche dei giocatori NON verranno ricalcolate automaticamente."
+  )) return;
+
+  try {
+    await ReportAPI.remove(matchId);
+    showToast("Partita eliminata.", "info");
+    await loadHistory();
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+// ─────────────────────────────────────────────
+// View / Edit match  ← 3 voti con retrocompatibilità
 // ─────────────────────────────────────────────
 function editMatch(matchId) {
   const match = matchHistory.find((m) => String(m.id ?? m._id) === String(matchId));
@@ -186,29 +267,34 @@ function editMatch(matchId) {
 
   editingMatchId = match.id ?? match._id;
 
-  // Normalizza chiavi in base a come API le restituisce (camelCase o snake_case)
-  const mScoreA = match.scoreA ?? match.score_a ?? 0;
-  const mScoreB = match.scoreB ?? match.score_b ?? 0;
-  const mTeamA = match.teamA ?? match.team_a ?? [];
-  const mTeamB = match.teamB ?? match.team_b ?? [];
+  const mScoreA  = match.scoreA ?? match.score_a ?? 0;
+  const mScoreB  = match.scoreB ?? match.score_b ?? 0;
+  const mTeamA   = match.teamA  ?? match.team_a  ?? [];
+  const mTeamB   = match.teamB  ?? match.team_b  ?? [];
   const mRatings = match.ratings ?? {};
-  const mGoals = match.goals ?? {};
+  const mGoals   = match.goals   ?? {};
   const mAssists = match.assists ?? {};
 
-  // Popoliamo il tabellone
   scoreAInput.value = mScoreA;
   scoreBInput.value = mScoreB;
 
-  // Popoliamo le squadre (assumiamo che teamA sia un array di ID o oggetti con .id)
   teamA = mTeamA.map((p) => getPlayerById(p.id ?? p)).filter(Boolean);
   teamB = mTeamB.map((p) => getPlayerById(p.id ?? p)).filter(Boolean);
 
   renderRatingsSection();
 
-  // Inseriamo i valori negli input appena generati
-  document.querySelectorAll(".rating-input").forEach((input) => {
-    const pid = input.dataset.player;
-    if (mRatings[pid] !== undefined) input.value = mRatings[pid];
+  // Popola i 3 voti (con retrocompatibilità per vecchio formato numerico singolo)
+  document.querySelectorAll("[data-field='porta']").forEach((input) => {
+    const r = mRatings[input.dataset.player];
+    input.value = (r && typeof r === "object") ? (r.porta ?? "") : "";
+  });
+  document.querySelectorAll("[data-field='difesa']").forEach((input) => {
+    const r = mRatings[input.dataset.player];
+    input.value = (r && typeof r === "object") ? (r.difesa ?? "") : (typeof r === "number" ? r : "");
+  });
+  document.querySelectorAll("[data-field='attacco']").forEach((input) => {
+    const r = mRatings[input.dataset.player];
+    input.value = (r && typeof r === "object") ? (r.attacco ?? "") : (typeof r === "number" ? r : "");
   });
   document.querySelectorAll(".goal-input").forEach((input) => {
     const pid = input.dataset.player;
@@ -222,8 +308,7 @@ function editMatch(matchId) {
   reportForm.classList.remove("hidden");
   btnSubmitReport.textContent = "🔄 Aggiorna Report";
   btnCancelEdit.classList.remove("hidden");
-  
-  // Scorri la pagina fino al form
+
   window.scrollTo({ top: reportForm.offsetTop - 50, behavior: "smooth" });
   showToast("Visualizzazione partita: puoi modificarla e aggiornare.");
 }
@@ -248,7 +333,7 @@ function populateMultiSelects(players) {
       return `<option value="${p.id}">${p.name} (${p.ruoloPreferito}, OVR ${playerOvr})</option>`;
     })
     .join("");
-    
+
   teamASelect.innerHTML = opts;
   teamBSelect.innerHTML = opts;
 }
@@ -272,7 +357,6 @@ btnConfirmTeams.addEventListener("click", () => {
     return;
   }
 
-  // Se stai impostando una nuova partita manualmente, esci dalla modalità modifica
   editingMatchId = null;
   btnSubmitReport.textContent = "💾 Salva Report";
   btnCancelEdit.classList.add("hidden");
@@ -296,7 +380,7 @@ btnLoadTeams.addEventListener("click", () => {
     return;
   }
 
-  editingMatchId = null; // Usciamo dalla modalità edit
+  editingMatchId = null;
   btnSubmitReport.textContent = "💾 Salva Report";
   btnCancelEdit.classList.add("hidden");
 
@@ -317,7 +401,7 @@ btnLoadTeams.addEventListener("click", () => {
 });
 
 // ─────────────────────────────────────────────
-// Submit or Update report
+// Submit / Update report  ← 3 voti
 // ─────────────────────────────────────────────
 btnSubmitReport.addEventListener("click", async () => {
   const scoreA = Number(scoreAInput.value);
@@ -329,50 +413,69 @@ btnSubmitReport.addEventListener("click", async () => {
   }
 
   const ratings = {};
-  const goals = {};
+  const goals   = {};
   const assists = {};
-  let valid = true;
+  let   valid   = true;
 
-  document.querySelectorAll(".rating-input").forEach((input) => {
-    const id = input.dataset.player;
-    const val = Number(input.value);
-    if (!val || val < 1 || val > 10) {
-      input.classList.add("input--error");
+  document.querySelectorAll(".rating-row").forEach((row) => {
+    const pid = row.dataset.id;
+
+    const portaInput   = row.querySelector("[data-field='porta']");
+    const difesaInput  = row.querySelector("[data-field='difesa']");
+    const attaccoInput = row.querySelector("[data-field='attacco']");
+
+    const portaRaw   = portaInput?.value.trim();
+    const difesaVal  = Number(difesaInput?.value);
+    const attaccoVal = Number(attaccoInput?.value);
+
+    // Porta: facoltativa — null = "senza voto"
+    const portaVal = portaRaw === "" ? null : Number(portaRaw);
+
+    if (portaVal !== null && (portaVal < 1 || portaVal > 10)) {
+      portaInput.classList.add("input--error");
       valid = false;
     } else {
-      input.classList.remove("input--error");
-      ratings[id] = val;
+      portaInput?.classList.remove("input--error");
     }
+
+    if (!difesaVal || difesaVal < 1 || difesaVal > 10) {
+      difesaInput?.classList.add("input--error");
+      valid = false;
+    } else {
+      difesaInput?.classList.remove("input--error");
+    }
+
+    if (!attaccoVal || attaccoVal < 1 || attaccoVal > 10) {
+      attaccoInput?.classList.add("input--error");
+      valid = false;
+    } else {
+      attaccoInput?.classList.remove("input--error");
+    }
+
+    ratings[pid] = { porta: portaVal, difesa: difesaVal, attacco: attaccoVal };
   });
 
   document.querySelectorAll(".goal-input").forEach((input) => {
     goals[input.dataset.player] = Number(input.value) || 0;
   });
-
   document.querySelectorAll(".assist-input").forEach((input) => {
     assists[input.dataset.player] = Number(input.value) || 0;
   });
 
   if (!valid) {
-    showToast("Compila tutti i voti (1–10) prima di salvare.", "error");
+    showToast("Compila Difesa e Attacco per tutti (1–10). Porta è facoltativa.", "error");
     return;
   }
 
   const payload = {
-    scoreA,
-    scoreB,
-    teamA: teamA.map((p) => p.id),
-    teamB: teamB.map((p) => p.id),
-    ratings,
-    goals,
-    assists,
+    scoreA, scoreB,
+    teamA:   teamA.map((p) => p.id),
+    teamB:   teamB.map((p) => p.id),
+    ratings, goals, assists,
   };
 
-  // Se stiamo modificando, chiedi conferma
   if (editingMatchId) {
-    if (!confirm("Sei sicuro di voler modificare questa partita? Le statistiche storiche verranno ricalcolate.")) {
-      return;
-    }
+    if (!confirm("Sei sicuro di voler modificare questa partita? Le statistiche storiche verranno ricalcolate.")) return;
   }
 
   btnSubmitReport.disabled = true;
@@ -380,17 +483,12 @@ btnSubmitReport.addEventListener("click", async () => {
 
   try {
     if (editingMatchId) {
-      // Affinché funzioni, devi avere ReportAPI.update() nel tuo file api.js!
-      if (typeof ReportAPI.update !== 'function') {
-        throw new Error("Manca la funzione ReportAPI.update in api.js");
-      }
       await ReportAPI.update(editingMatchId, payload);
       showToast("Report aggiornato con successo!");
     } else {
       await ReportAPI.save(payload);
       showToast("Report salvato! Statistiche aggiornate.");
     }
-    
     resetForm();
     await loadHistory();
   } catch (err) {
@@ -400,6 +498,11 @@ btnSubmitReport.addEventListener("click", async () => {
     btnSubmitReport.textContent = editingMatchId ? "🔄 Aggiorna Report" : "💾 Salva Report";
   }
 });
+
+// ─────────────────────────────────────────────
+// Ricerca nello storico per data
+// ─────────────────────────────────────────────
+searchInput?.addEventListener("input", applySearch);
 
 // ─────────────────────────────────────────────
 // Init
@@ -415,4 +518,3 @@ async function init() {
 }
 
 init();
-console.log("PLAYERS:", allPlayers);
