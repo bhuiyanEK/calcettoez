@@ -2,6 +2,7 @@
  * report.js – Inserimento risultato e statistiche partita
  */
 import { PlayersAPI, ReportAPI } from "./api.js";
+import { esc, roleChip } from "./ui.js";
 
 // ─────────────────────────────────────────────
 // DOM refs
@@ -42,11 +43,6 @@ function showToast(msg, type = "success") {
   setTimeout(() => toast.classList.remove("toast--visible"), 3000);
 }
 
-function getRoleIcon(role) {
-  const icons = { portiere: "🧤", difensore: "🛡️", attaccante: "⚽", jolly: "⭐" };
-  return icons[role] || "❓";
-}
-
 function getPlayerById(id) {
   return allPlayers.find((p) => String(p.id) === String(id));
 }
@@ -56,7 +52,7 @@ function resetForm() {
   teamA = [];
   teamB = [];
   editingMatchId = null;
-  btnSubmitReport.textContent = "💾 Salva Report";
+  btnSubmitReport.textContent = "Salva report";
   btnCancelEdit.classList.add("hidden");
   sessionStorage.removeItem("lastTeams");
   scoreAInput.value = "0";
@@ -82,11 +78,11 @@ function renderRatingsSection() {
           if (!player) return "";
           return `
           <div class="rating-row" data-id="${player.id}">
-            <span class="rating-icon">${getRoleIcon(player.ruoloPreferito)}</span>
-            <span class="rating-name">${player.name}</span>
+            ${roleChip(player.ruoloPreferito)}
+            <span class="rating-name">${esc(player.name)}</span>
 
             <label class="rating-field">
-              🧤 Porta
+              Porta
               <input
                 type="number"
                 class="input input--sm rating-input--porta"
@@ -99,7 +95,7 @@ function renderRatingsSection() {
             </label>
 
             <label class="rating-field">
-              🛡️ Difesa
+              Difesa
               <input
                 type="number"
                 class="input input--sm rating-input--difesa"
@@ -111,7 +107,7 @@ function renderRatingsSection() {
             </label>
 
             <label class="rating-field">
-              ⚽ Attacco
+              Attacco
               <input
                 type="number"
                 class="input input--sm rating-input--attacco"
@@ -123,7 +119,7 @@ function renderRatingsSection() {
             </label>
 
             <label class="rating-field">
-              ⚽ Goal
+              Gol
               <input
                 type="number"
                 class="input input--sm goal-input"
@@ -134,7 +130,7 @@ function renderRatingsSection() {
             </label>
 
             <label class="rating-field">
-              🎯 Assist
+              Assist
               <input
                 type="number"
                 class="input input--sm assist-input"
@@ -149,8 +145,8 @@ function renderRatingsSection() {
     </div>`;
 
   ratingsSection.innerHTML =
-    makeTeamBlock(teamA, "🔵 Squadra A") +
-    makeTeamBlock(teamB, "🔴 Squadra B");
+    makeTeamBlock(teamA, `<span class="team-dot"></span>Squadra A`) +
+    makeTeamBlock(teamB, `<span class="team-dot team-dot--b"></span>Squadra B`);
 }
 
 // ─────────────────────────────────────────────
@@ -177,17 +173,16 @@ function renderHistory(matches) {
       return `
       <div class="card history-card" data-match-id="${matchId}" title="Clicca per visualizzare/modificare">
         <div class="history-card__score">
-          <span>🔵 ${scoreA}</span>
+          <span>${scoreA}</span>
           <span class="history-card__vs">–</span>
-          <span>${scoreB} 🔴</span>
+          <span>${scoreB}</span>
         </div>
         <div class="history-card__date">${dateStr}</div>
         <button
           class="btn btn--danger btn--sm history-card__delete"
           data-match-id="${matchId}"
           title="Elimina partita"
-          style="margin-top:.5rem"
-        >🗑️ Elimina</button>
+        >Elimina</button>
       </div>`;
     })
     .join("");
@@ -215,7 +210,7 @@ async function loadHistory() {
     matchHistory = matches;
     applySearch();
   } catch (err) {
-    historyList.innerHTML = `<p class="empty-state">Errore nel caricamento.</p>`;
+    historyList.innerHTML = `<p class="empty-state">Impossibile caricare lo storico. Ricarica la pagina.</p>`;
   }
 }
 
@@ -245,8 +240,8 @@ function applySearch() {
 // ─────────────────────────────────────────────
 async function deleteMatch(matchId) {
   if (!confirm(
-    "Vuoi davvero eliminare questa partita?\n" +
-    "Attenzione: le statistiche dei giocatori NON verranno ricalcolate automaticamente."
+    "Eliminare questa partita?\n" +
+    "Le statistiche dei giocatori non vengono ricalcolate automaticamente."
   )) return;
 
   try {
@@ -306,7 +301,7 @@ function editMatch(matchId) {
   });
 
   reportForm.classList.remove("hidden");
-  btnSubmitReport.textContent = "🔄 Aggiorna Report";
+  btnSubmitReport.textContent = "Aggiorna report";
   btnCancelEdit.classList.remove("hidden");
 
   window.scrollTo({ top: reportForm.offsetTop - 50, behavior: "smooth" });
@@ -358,7 +353,7 @@ btnConfirmTeams.addEventListener("click", () => {
   }
 
   editingMatchId = null;
-  btnSubmitReport.textContent = "💾 Salva Report";
+  btnSubmitReport.textContent = "Salva report";
   btnCancelEdit.classList.add("hidden");
 
   teamA = selectedA.map((id) => getPlayerById(id));
@@ -381,7 +376,7 @@ btnLoadTeams.addEventListener("click", () => {
   }
 
   editingMatchId = null;
-  btnSubmitReport.textContent = "💾 Salva Report";
+  btnSubmitReport.textContent = "Salva report";
   btnCancelEdit.classList.add("hidden");
 
   const { teamA: rawA, teamB: rawB } = JSON.parse(stored);
@@ -484,10 +479,10 @@ btnSubmitReport.addEventListener("click", async () => {
   try {
     if (editingMatchId) {
       await ReportAPI.update(editingMatchId, payload);
-      showToast("Report aggiornato con successo!");
+      showToast("Report aggiornato.");
     } else {
       await ReportAPI.save(payload);
-      showToast("Report salvato! Statistiche aggiornate.");
+      showToast("Report salvato, statistiche aggiornate.");
     }
     resetForm();
     await loadHistory();
@@ -495,7 +490,7 @@ btnSubmitReport.addEventListener("click", async () => {
     showToast(err.message, "error");
   } finally {
     btnSubmitReport.disabled = false;
-    btnSubmitReport.textContent = editingMatchId ? "🔄 Aggiorna Report" : "💾 Salva Report";
+    btnSubmitReport.textContent = editingMatchId ? "Aggiorna report" : "Salva report";
   }
 });
 

@@ -7,11 +7,11 @@ import { PlayersAPI, ReportAPI } from "./api.js";
 
 // ── Config ─────────────────────────────────────
 const METRICS = {
-  goals:   { label: "⚽ Capocannoniere",   title: "Capocannoniere",   unit: "gol"    },
-  assists: { label: "🎯 Assistman",        title: "Miglior Assistman", unit: "assist" },
-  rating:  { label: "⭐ Voto medio",       title: "Voto medio più alto", unit: ""     },
+  goals:   { label: "Capocannoniere",   title: "Capocannoniere",   unit: "gol"    },
+  assists: { label: "Assistman",        title: "Miglior Assistman", unit: "assist" },
+  rating:  { label: "Voto medio",       title: "Voto medio più alto", unit: ""     },
 };
-const MEDALS = ["🥇", "🥈", "🥉"];
+const MEDALS = ["1", "2", "3"];
 const MIN_GAMES_RATING = { season: 3, month: 2 };   // soglia anti "10 in una sola partita"
 const MONTHS_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 
@@ -122,7 +122,7 @@ function render() {
   renderControls();
 
   if (!matches.length || period === null) {
-    elList.innerHTML = `<p class="empty-state">Nessuna partita registrata. Compila un <a href="/report.html" style="color:var(--accent)">Report Partita</a> per vedere le classifiche.</p>`;
+    elList.innerHTML = `<p class="empty-state">Nessuna partita registrata. Compila un <a href="/report.html">report partita</a> per vedere le classifiche.</p>`;
     elNote.textContent = "";
     return;
   }

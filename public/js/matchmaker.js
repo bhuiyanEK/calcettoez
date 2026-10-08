@@ -14,6 +14,7 @@
  *  - Esportazione formazione come immagine PNG (download / condivisione)
  */
 import { PlayersAPI } from "./api.js";
+import { esc, roleChip, ICON, ROLES } from "./ui.js";
 
 // ── DOM ──────────────────────────────────────
 const searchInput        = document.getElementById("player-search");
@@ -67,17 +68,16 @@ const layoutCache = { A: {}, B: {} };
 
 // ── Constants ─────────────────────────────────
 const FORMA_OPTIONS = [
-  { value:"infortunato",  label:"🩹 Infort.",    delta:-2.5 },
-  { value:"scarsa_forma", label:"😕 Scarsa",     delta:-1.0 },
-  { value:"normale",      label:"😐 Normale",    delta:0    },
-  { value:"in_forma",     label:"💪 In forma",   delta:+1.0 },
-  { value:"grande_forma", label:"🔥 Grande",     delta:+2.0 },
+  { value:"infortunato",  label:"Infortunato",  delta:-2.5 },
+  { value:"scarsa_forma", label:"Scarsa forma", delta:-1.0 },
+  { value:"normale",      label:"Normale",      delta:0    },
+  { value:"in_forma",     label:"In forma",     delta:+1.0 },
+  { value:"grande_forma", label:"Grande forma", delta:+2.0 },
 ];
 const FORMA_CLS = {
   infortunato:"forma--red", scarsa_forma:"forma--orange",
   normale:"forma--grey",    in_forma:"forma--green", grande_forma:"forma--gold",
 };
-const ROLE_ICON   = { portiere:"🧤", difensore:"🛡️", centrocampista:"🔵", attaccante:"⚽" };
 const ROLE_LABELS = { portiere:"Portiere", difensore:"Difensore", centrocampista:"Centrocampista", attaccante:"Attaccante" };
 const ROLE_ORDER  = ["portiere","difensore","centrocampista","attaccante"];
 const CHEMISTRY_BONUS = { 0:0, 1:0.3, 2:0.8, 3:2.0, 4:3.5 };
@@ -87,8 +87,8 @@ const bonusOf = lv => {
   if (lo === hi) return CHEMISTRY_BONUS[lo] ?? 0;
   return CHEMISTRY_BONUS[lo] + (CHEMISTRY_BONUS[hi] - CHEMISTRY_BONUS[lo]) * (lv - lo);
 };
-const esc = str => String(str).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-const TEAM_COLORS = { A:"#3d7eff", B:"#e74c3c" };
+const TEAM_COLORS = { A:"#6f95e8", B:"#e0705f" };
+const FORMA_DOT = { infortunato:"#e0675a", scarsa_forma:"#e0a93b", in_forma:"#58c79a", grande_forma:"#e8c35a" };
 const PITCH_W = 420, PITCH_H = 560;
 
 // ── Number formatting ─────────────────────────
@@ -207,7 +207,7 @@ function updateCounter() {
   const valid = n >= 10 && n % 2 === 0;
   selCount.className   = n===0?"":n>16?"counter--over":valid?"counter--ready":"counter--warn";
   btnGenerate.disabled = !valid;
-  btnGenerate.textContent = valid ? `⚡ Genera (${n/2}v${n/2})` : "⚡ Genera Squadre";
+  btnGenerate.textContent = valid ? `Genera ${n/2} contro ${n/2}` : "Genera squadre";
 }
 
 function effectiveOVR(p) {
@@ -251,16 +251,16 @@ function updateBalanceUI(strA, strB, showDelta = false) {
 
   const verdict = document.getElementById("balance-verdict");
   if (diff <= 2) {
-    verdict.textContent = "⚡ Squadre perfettamente equilibrate";
+    verdict.textContent = "Squadre perfettamente equilibrate";
     verdict.className   = "balance-verdict balance-verdict--great";
   } else if (diff <= 5) {
-    verdict.textContent = "✅ Squadre equilibrate";
+    verdict.textContent = "Squadre equilibrate";
     verdict.className   = "balance-verdict balance-verdict--ok";
   } else if (diff <= 10) {
-    verdict.textContent = `⚠️ ${strA > strB ? "Squadra A" : "Squadra B"} più forte del ${diffPct}%`;
+    verdict.textContent = `${strA > strB ? "Squadra A" : "Squadra B"} più forte del ${diffPct}%`;
     verdict.className   = "balance-verdict balance-verdict--unbal";
   } else {
-    verdict.textContent = `❌ ${strA > strB ? "Squadra A" : "Squadra B"} molto più forte (${diffPct}%)`;
+    verdict.textContent = `${strA > strB ? "Squadra A" : "Squadra B"} molto più forte (${diffPct}%)`;
     verdict.className   = "balance-verdict balance-verdict--bad";
   }
 
@@ -270,8 +270,8 @@ function updateBalanceUI(strA, strB, showDelta = false) {
     if (Math.abs(improvement) > 0.1) {
       badge.style.display = "";
       badge.textContent   = improvement > 0
-        ? `↑ Più equilibrate (−${fmt(improvement)})`
-        : `↓ Meno equilibrate (+${fmt(-improvement)})`;
+        ? `Più equilibrate (−${fmt(improvement)})`
+        : `Meno equilibrate (+${fmt(-improvement)})`;
       badge.className = `swap-delta swap-delta--${improvement > 0 ? "better" : "worse"}`;
       setTimeout(() => { badge.style.display = "none"; }, 4000);
     } else {
@@ -288,12 +288,12 @@ function renderCaptainSlot(team, captainId) {
   if (player) {
     slotEl.classList.add("filled");
     slotEl.innerHTML = `
-      <span class="captain-slot__badge">${team==="a"?"🔵":"🔴"}</span>
+      <span class="team-dot ${team==="b"?"team-dot--b":""}"></span>
       <div class="captain-slot__info">
-        <div class="captain-slot__name">${player.nickname}</div>
-        <div class="captain-slot__role">${player.ruoloPreferito}</div>
+        <div class="captain-slot__name">${esc(player.nickname)}</div>
+        <div class="captain-slot__role">${ROLES[player.ruoloPreferito]?.label ?? ""}</div>
       </div>
-      <button class="captain-slot__clear" data-team="${team}">✕</button>`;
+      <button class="captain-slot__clear" data-team="${team}" type="button" aria-label="Rimuovi capitano ${team.toUpperCase()}">✕</button>`;
     slotEl.querySelector(".captain-slot__clear").addEventListener("click", e => {
       e.stopPropagation();
       if (team==="a") captainA=null; else captainB=null;
@@ -302,7 +302,7 @@ function renderCaptainSlot(team, captainId) {
   } else {
     slotEl.classList.remove("filled");
     slotEl.innerHTML = `
-      <span class="captain-slot__badge">${team==="a"?"🔵":"🔴"}</span>
+      <span class="team-dot ${team==="b"?"team-dot--b":""}"></span>
       <div class="captain-slot__info">
         <div class="captain-slot__name">Nessun capitano ${team.toUpperCase()}</div>
         <div class="captain-slot__role">Premi "Cap ${team.toUpperCase()}" su un giocatore</div>
@@ -312,11 +312,11 @@ function renderCaptainSlot(team, captainId) {
 
 function setCaptain(playerId, team) {
   if (team==="a") {
-    if (captainB===playerId) { showToast("Già capitano B!", "error"); return; }
+    if (captainB===playerId) { showToast("È già capitano B.", "error"); return; }
     captainA = captainA===playerId ? null : playerId;
     renderCaptainSlot("a", captainA);
   } else {
-    if (captainA===playerId) { showToast("Già capitano A!", "error"); return; }
+    if (captainA===playerId) { showToast("È già capitano A.", "error"); return; }
     captainB = captainB===playerId ? null : playerId;
     renderCaptainSlot("b", captainB);
   }
@@ -359,12 +359,15 @@ function renderList() {
     return `
     <div class="pcard ${sel?"is-selected":""}" data-id="${p.id}" role="checkbox" aria-checked="${sel}" tabindex="0" title="${esc(tip)}">
       <div class="pcard__top">
-        <span class="pcard__name">${ROLE_ICON[p.ruoloPreferito]||"❓"} ${esc(p.nickname)}${p.isUnknown?" 👤":""}</span>
+        <div class="pcard__id">
+          <span class="pcard__name">${esc(p.nickname)}</span>
+          <span style="display:flex;gap:.3rem;align-items:center">${roleChip(p.ruoloPreferito)}${p.isUnknown ? `<span class="badge badge--unknown" title="Giocatore sconosciuto: statistiche stimate">Stima</span>` : ""}</span>
+        </div>
         <span class="pcard__ovr">${fmt(eff)}${delta}</span>
       </div>
       ${sel ? `<div class="pcard__cap">
-        ${isCapA ? `<span style="color:var(--accent)">🔵 Capitano A</span>` : ""}
-        ${isCapB ? `<span style="color:var(--danger)">🔴 Capitano B</span>` : ""}
+        ${isCapA ? `<span style="color:var(--team-a)">Capitano A</span>` : ""}
+        ${isCapB ? `<span style="color:var(--team-b)">Capitano B</span>` : ""}
         ${!isCapA && !isCapB ? `
           <button type="button" class="cb-captain-btn" data-pid="${p.id}" data-team="a">Cap A</button>
           <button type="button" class="cb-captain-btn" data-pid="${p.id}" data-team="b">Cap B</button>` : ""}
@@ -413,6 +416,12 @@ playerCheckboxList.addEventListener("change", async e => {
 });
 
 // ── Formation SVG ─────────────────────────────
+/** Piccolo badge tondo sull'angolo del nodo giocatore (capitano, fuori ruolo) */
+function nodeBadge(x, y, fill, text, ink) {
+  return `<circle cx="${x}" cy="${y}" r="8" fill="${fill}" stroke="#0c0e0b" stroke-width="1.5"/>
+      <text x="${x}" y="${y+.5}" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="800" fill="${ink}" font-family="Geist,Segoe UI,Arial,sans-serif">${text}</text>`;
+}
+
 function renderFormationSVG(players, teamKey, chemPairs, captainId, formationName, roleMapping, exportMode = false) {
   const W = PITCH_W, H = PITCH_H;
   const col   = TEAM_COLORS[teamKey];
@@ -446,18 +455,18 @@ function renderFormationSVG(players, teamKey, chemPairs, captainId, formationNam
       return `<g>
         <circle cx="${cx}" cy="${cy}" r="24" fill="rgba(255,255,255,.04)" stroke="${col}" stroke-width="1.5" stroke-dasharray="5,3"/>
         <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
-          font-size="13" fill="rgba(255,255,255,.2)">${ROLE_ICON[s.role]||"?"}</text>
+          font-size="11" font-weight="700" font-family="Geist Mono,monospace" fill="rgba(255,255,255,.28)">${ROLES[s.role]?.code||"?"}</text>
       </g>`;
     }
     const p      = s.player;
     // Nell'immagine esportata il nome è sempre completo (font ridotto se lungo)
     const nick   = exportMode ? p.nickname : (p.nickname.length > 8 ? p.nickname.slice(0,7)+"…" : p.nickname);
     const nickFs = exportMode ? Math.min(11, Math.max(6.5, 46 / (p.nickname.length * 0.62))) : 11;
-    const forma  = {infortunato:"🩹",scarsa_forma:"😕",normale:"",in_forma:"💪",grande_forma:"🔥"}[p.formaAttuale]||"";
+    const forma  = FORMA_DOT[p.formaAttuale] || "";
     const isCap  = p.id === captainId;
     const isOut  = s.outOfRole;
-    const stroke = isCap ? "#ffd700" : isOut ? "#f5a623" : "rgba(255,255,255,.8)";
-    const fillBg = isOut ? (teamKey==="A" ? "#2a52b0" : "#8c2a22") : col;
+    const stroke = isCap ? "#e8c35a" : isOut ? "#e0a93b" : "rgba(255,255,255,.8)";
+    const fillBg = isOut ? (teamKey==="A" ? "#3b5aa3" : "#8d3a30") : col;
     const r      = isCap ? 26 : 23;
     const ovrVal = p.ovr?.[s.role] !== undefined ? fmt(p.ovr[s.role]) : fmt(effectiveOVR(p));
 
@@ -467,20 +476,20 @@ function renderFormationSVG(players, teamKey, chemPairs, captainId, formationNam
       ${isCap?`<circle cx="${cx}" cy="${cy}" r="${r+6}" fill="none" stroke="#ffd70050" stroke-width="1.5" stroke-dasharray="4,3"/>`: ""}
       ${isOut&&!isCap?`<circle cx="${cx}" cy="${cy}" r="${r+5}" fill="none" stroke="#f5a62350" stroke-width="1.5" stroke-dasharray="4,3"/>`: ""}
       <text x="${cx}" y="${cy-3}" text-anchor="middle" dominant-baseline="middle"
-        font-size="${nickFs}" font-weight="700" fill="white" font-family="Inter,sans-serif">${esc(nick)}</text>
+        font-size="${nickFs}" font-weight="700" fill="white" font-family="Geist,Segoe UI,Arial,sans-serif">${esc(nick)}</text>
       <text x="${cx}" y="${cy+10}" text-anchor="middle" dominant-baseline="middle"
-        font-size="9.5" fill="rgba(255,255,255,.7)" font-family="Inter,sans-serif">${ovrVal}</text>
-      ${isCap?`<text x="${cx+r-2}" y="${cy-r+2}" font-size="13">🏅</text>`: ""}
-      ${isOut&&!isCap?`<text x="${cx+r-3}" y="${cy-r+3}" font-size="11">⚠️</text>`: ""}
-      ${forma&&!isCap&&!isOut?`<text x="${cx+r-3}" y="${cy-r+3}" font-size="12">${forma}</text>`: ""}
+        font-size="9.5" fill="rgba(255,255,255,.7)" font-family="Geist,Segoe UI,Arial,sans-serif">${ovrVal}</text>
+      ${isCap?nodeBadge(cx+r-3, cy-r+3, "#e8c35a", "C", "#2a2208"):""}
+      ${isOut&&!isCap?nodeBadge(cx+r-3, cy-r+3, "#e0a93b", "!", "#241a04"):""}
+      ${forma&&!isCap&&!isOut?`<circle cx="${cx+r-4}" cy="${cy-r+4}" r="5.5" fill="${forma}" stroke="#0c0e0b" stroke-width="1.5"/>`:""}
     </g>`;
   }).join("");
 
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="formation-svg" data-team="${teamKey}">
     <defs>
       <linearGradient id="grass-${teamKey}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1e5c1e"/>
-        <stop offset="100%" stop-color="#145214"/>
+        <stop offset="0%" stop-color="#2d5a3a"/>
+        <stop offset="100%" stop-color="#1e4529"/>
       </linearGradient>
     </defs>
     <rect width="${W}" height="${H}" rx="10" fill="url(#grass-${teamKey})"/>
@@ -514,13 +523,13 @@ function renderTeamPanel(containerId, players, teamKey, chemPairs) {
 
   // ── Formation selector ──
   const formSelectHtml = `<div class="formation-selector">
-    <span class="formation-selector__label">⚽ Modulo</span>
+    <span class="formation-selector__label">Modulo</span>
     <select class="formation-select-ctrl input input--sm" data-team="${teamKey}">
       ${Object.keys(formations).map(name =>
         `<option value="${name}" ${name===curFormation?"selected":""}>${name}</option>`
       ).join("")}
     </select>
-    ${Object.keys(formations).length > 1 ? `<span style="font-size:.72rem;color:var(--text-muted)">— ${n} giocatori, ${Object.keys(formations).length} moduli disponibili</span>` : ""}
+    ${Object.keys(formations).length > 1 ? `<span class="formation-selector__note">${Object.keys(formations).length} moduli per ${n} giocatori</span>` : ""}
   </div>`;
 
   // ── Player list ──
@@ -542,26 +551,26 @@ function renderTeamPanel(containerId, players, teamKey, chemPairs) {
 
       return `<div class="team-player-card ${isOut?"team-player-card--diff":""} ${isCap?"is-captain":""} ${isLocked?"locked":""} ${isSelected?"selected":""}"
           data-player-id="${p.id}" data-team="${teamKey}" draggable="${!isLocked}">
-        <span class="tpc-assigned-role">${ROLE_ICON[effectRole]||"❓"}</span>
+        ${roleChip(effectRole)}
         <div class="tpc-info">
-          <span class="tpc-name">${p.nickname}${isCap?` <span style="font-size:.75rem">🏅</span>`:""}</span>
+          <span class="tpc-name">${esc(p.nickname)}${isCap?`<span class="tpc-cap">CAP</span>`:""}</span>
           <div class="tpc-role-row">
             ${isOut
-              ? `<span class="tpc-out-badge">⚠️ fuori ruolo</span>`
+              ? `<span class="tpc-out-badge">Fuori ruolo</span>`
               : ""}
             <select class="role-override-select input input--xs" data-player-id="${p.id}" data-team="${teamKey}">
               ${ROLE_ORDER.map(r =>
-                `<option value="${r}" ${r===effectRole?"selected":""}>${ROLE_ICON[r]} ${ROLE_LABELS[r]}</option>`
+                `<option value="${r}" ${r===effectRole?"selected":""}>${ROLE_LABELS[r]}</option>`
               ).join("")}
             </select>
           </div>
         </div>
         <div class="tpc-right">
           <span class="tpc-ovr-assigned">${ovrForRole}</span>
-          <span class="forma-badge ${FORMA_CLS[p.formaAttuale]}" style="font-size:.6rem;padding:.08rem .3rem">${f.label}</span>
+          <span class="forma-badge ${FORMA_CLS[p.formaAttuale]}">${f.label}</span>
         </div>
-        <button class="lock-btn ${isLocked?"locked":""}" data-player-id="${p.id}">
-          ${isLocked?"🔒":"🔓"}
+        <button type="button" class="lock-btn ${isLocked?"locked":""}" data-player-id="${p.id}" aria-label="${isLocked?"Sblocca":"Blocca"} ${esc(p.nickname)}" aria-pressed="${isLocked}">
+          ${isLocked?ICON.lock:ICON.unlock}
         </button>
       </div>`;
     }).join("");
@@ -570,14 +579,14 @@ function renderTeamPanel(containerId, players, teamKey, chemPairs) {
   let chemHtml = "";
   if (chemPairs?.length) {
     chemHtml = `<div class="chem-pairs-block">
-      <div class="chem-pairs-title">🤝 Intesa</div>
+      <div class="chem-pairs-title">Intesa in squadra</div>
       ${chemPairs.map(c=>{
         const lv    = Math.round(c.level);
         const stars = "★".repeat(lv)+"☆".repeat(4-lv);
         const cls   = c.level>=3?"chem-pair--high":c.level>=2?"chem-pair--mid":"chem-pair--low";
         return `<div class="chem-pair ${cls}">
-          <span>${c.a} ↔ ${c.b}</span>
-          <span>${stars} <span class="chem-bonus">+${fmt(c.bonus)}</span></span>
+          <span>${esc(c.a)} ↔ ${esc(c.b)}</span>
+          <span><span class="chem-pair__level">${stars}</span> <span class="chem-bonus">+${fmt(c.bonus)}</span></span>
         </div>`;
       }).join("")}
     </div>`;
@@ -749,7 +758,7 @@ function wirePitchDrag(container, containerId, players, teamKey, chemPairs) {
           const to   = targetPid ? (otherKey === "A" ? teamA : teamB).find(p => p.id === targetPid) : null;
           if (!from || !to) { showToast("Rilascia il giocatore sopra uno dell'altra squadra per scambiarli.", "error"); rerender(); return; }
           if (lockedPlayerIds.has(from.id) || lockedPlayerIds.has(to.id)) {
-            showToast("Uno dei due giocatori è bloccato 🔒", "error"); rerender(); return;
+            showToast("Uno dei due giocatori è bloccato.", "error"); rerender(); return;
           }
           attemptSwap(from, teamKey, to, otherKey, { inheritPos: true });
           return;
@@ -776,14 +785,14 @@ function renderBothPanels() {
 function handleCardClick(player, team) {
   if (!selectedForSwap) {
     selectedForSwap = { player, team };
-    swapSelectedInfo.textContent = `✓ ${player.nickname} (Squadra ${team})`;
+    swapSelectedInfo.textContent = `Selezionato: ${player.nickname} (Squadra ${team})`;
     swapActionBar.classList.remove("hidden");
     renderBothPanels();
   } else {
     if (selectedForSwap.player.id === player.id) { cancelSwap(); return; }
     if (selectedForSwap.team === team) {
       selectedForSwap = { player, team };
-      swapSelectedInfo.textContent = `✓ ${player.nickname} (Squadra ${team})`;
+      swapSelectedInfo.textContent = `Selezionato: ${player.nickname} (Squadra ${team})`;
       renderBothPanels(); return;
     }
     attemptSwap(selectedForSwap.player, selectedForSwap.team, player, team);
@@ -834,7 +843,7 @@ function executeSwap(playerFrom, teamFrom, playerTo, teamTo, opts = {}) {
   cancelSwap();
   renderBothPanels();
   updateBalanceUI(computeStrength(teamA,chemistryA), computeStrength(teamB,chemistryB), true);
-  showToast(`⇄ ${playerFrom.nickname} ↔ ${playerTo.nickname}`);
+  showToast(`Scambio: ${playerFrom.nickname} ↔ ${playerTo.nickname}`);
   saveTeamsToSession();
 }
 
@@ -867,7 +876,6 @@ function computeSuggestions() {
   suggestionsPanel.classList.remove("hidden");
   suggestionsList.innerHTML = top.map(c=>`
     <div class="suggestion-item" data-pa="${c.pA.id}" data-pb="${c.pB.id}">
-      <span>💡</span>
       <span class="suggestion-item__text">Scambia <strong>${c.pA.nickname}</strong> (A) con <strong>${c.pB.nickname}</strong> (B)</span>
       <span class="suggestion-item__delta suggestion-item__delta--pos">↑ −${fmt(c.improvement)} Δ</span>
       <button class="btn btn--secondary btn--sm" data-pa="${c.pA.id}" data-pb="${c.pB.id}">Applica</button>
@@ -894,7 +902,7 @@ function saveTeamsToSession() {
 // ── Generate ──────────────────────────────────
 async function generate() {
   if (checkedIds.size<10||checkedIds.size%2!==0) return;
-  btnGenerate.disabled=true; btnGenerate.textContent="⏳ Ottimizzazione…";
+  btnGenerate.disabled=true; btnGenerate.textContent="Ottimizzazione in corso…";
   prevStrA=null; prevStrB=null;
   try {
     const body = { playerIds:[...checkedIds] };
@@ -922,12 +930,12 @@ async function generate() {
     teamsSection.classList.remove("hidden");
     teamsSection.scrollIntoView({ behavior:"smooth" });
     saveTeamsToSession();
-    showToast("Squadre generate! Modifica con drag&drop o selezione.");
+    showToast("Squadre generate. Trascina i giocatori per modificarle.");
   } catch(err) { showToast(err.message,"error"); }
   finally {
     const n=checkedIds.size;
     btnGenerate.disabled=false;
-    btnGenerate.textContent = n>=10&&n%2===0 ? `⚡ Genera (${n/2}v${n/2})` : "⚡ Genera Squadre";
+    btnGenerate.textContent = n>=10&&n%2===0 ? `Genera ${n/2} contro ${n/2}` : "Genera squadre";
   }
 }
 
@@ -937,7 +945,7 @@ function buildExportSVG() {
   const PAD = 28, GAP = 24, HEAD = 84, TITLE = 46, FOOT = 44;
   const W = PAD * 2 + PITCH_W * 2 + GAP;
   const H = HEAD + TITLE + PITCH_H + FOOT;
-  const FONT = "Inter, 'Segoe UI', Arial, sans-serif";
+  const FONT = "'Segoe UI', Arial, Helvetica, sans-serif";
 
   const strA = computeStrength(teamA, chemistryA);
   const strB = computeStrength(teamB, chemistryB);
@@ -953,18 +961,19 @@ function buildExportSVG() {
   const date = new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const n = teamA.length;
   const header = (x, label, str, col) => `
-    <text x="${x}" y="${HEAD + 30}" font-family="${FONT}" font-size="20" font-weight="800" fill="${col}">${label}</text>
-    <text x="${x + PITCH_W}" y="${HEAD + 30}" text-anchor="end" font-family="${FONT}" font-size="15" font-weight="700" fill="#8892a4">Forza ${fmt(str)}</text>`;
+    <circle cx="${x + 7}" cy="${HEAD + 24}" r="7" fill="${col}"/>
+    <text x="${x + 24}" y="${HEAD + 30}" font-family="${FONT}" font-size="20" font-weight="800" fill="${col}">${label}</text>
+    <text x="${x + PITCH_W}" y="${HEAD + 30}" text-anchor="end" font-family="${FONT}" font-size="15" font-weight="700" fill="#a3a99a">Forza ${fmt(str)}</text>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <rect width="${W}" height="${H}" fill="#0f1117"/>
-    <text x="${W / 2}" y="40" text-anchor="middle" font-family="${FONT}" font-size="28" font-weight="800" fill="#e8eaf0">⚽ CalcettoEz · Formazioni</text>
-    <text x="${W / 2}" y="66" text-anchor="middle" font-family="${FONT}" font-size="14" fill="#8892a4">${esc(date)} · ${n} vs ${n}</text>
-    ${header(xA, "🔵 Squadra A", strA, TEAM_COLORS.A)}
-    ${header(xB, "🔴 Squadra B", strB, TEAM_COLORS.B)}
+    <rect width="${W}" height="${H}" fill="#0c0e0b"/>
+    <text x="${W / 2}" y="40" text-anchor="middle" font-family="${FONT}" font-size="28" font-weight="800" fill="#eceee4">CalcettoEz · Formazioni</text>
+    <text x="${W / 2}" y="66" text-anchor="middle" font-family="${FONT}" font-size="14" fill="#a3a99a">${esc(date)} · ${n} vs ${n}</text>
+    ${header(xA, "Squadra A", strA, TEAM_COLORS.A)}
+    ${header(xB, "Squadra B", strB, TEAM_COLORS.B)}
     ${pitch(teamA, "A", chemistryA, captainA, fA, roleMappingA, xA)}
     ${pitch(teamB, "B", chemistryB, captainB, fB, roleMappingB, xB)}
-    <text x="${W / 2}" y="${H - 16}" text-anchor="middle" font-family="${FONT}" font-size="13" fill="#8892a4">Δ forza: ${fmt(Math.abs(strA - strB))}</text>
+    <text x="${W / 2}" y="${H - 16}" text-anchor="middle" font-family="${FONT}" font-size="13" fill="#a3a99a">Δ forza: ${fmt(Math.abs(strA - strB))}</text>
   </svg>`;
 }
 
@@ -1005,7 +1014,7 @@ document.getElementById("btn-export-img").addEventListener("click", async () => 
   if (!teamA.length) return;
   try {
     downloadBlob(await teamsImageBlob(), imageFilename());
-    showToast("Immagine scaricata!");
+    showToast("Immagine scaricata.");
   } catch (err) { showToast(err.message, "error"); }
 });
 
@@ -1043,7 +1052,7 @@ document.getElementById("btn-reset-teams").addEventListener("click", () => {
   formationB=defaultFormation(teamB.length);
   cancelSwap();
   renderBothPanels();
-  showToast("Squadre ripristinate!");
+  showToast("Squadre ripristinate.");
 });
 
 btnCancelSwap.addEventListener("click", cancelSwap);
@@ -1057,12 +1066,12 @@ btnClearSel.addEventListener("click",()=>{
 
 btnAutoSelect?.addEventListener("click", () => {
   const available = allPlayers.filter(p => p.formaAttuale !== "infortunato");
-  if (!available.length) { showToast("Nessun giocatore disponibile!", "error"); return; }
+  if (!available.length) { showToast("Nessun giocatore disponibile.", "error"); return; }
   checkedIds.clear(); captainA=null; captainB=null;
   available.sort((a,b)=>b.storico.partite-a.storico.partite).slice(0,10).forEach(p=>checkedIds.add(p.id));
   renderCaptainSlot("a",null); renderCaptainSlot("b",null);
   renderList(); updateCounter();
-  showToast(`${Math.min(available.length,10)} giocatori auto-selezionati!`);
+  showToast(`${Math.min(available.length,10)} giocatori auto-selezionati.`);
 });
 
 searchInput.addEventListener("input", renderList);

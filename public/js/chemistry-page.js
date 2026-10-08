@@ -1,6 +1,7 @@
 /**
  * chemistry-page.js – Dedicated chemistry management page
  */
+import { esc, roleChip, ROLES } from "./ui.js";
 
 const CHEM_LEVELS = [
   { value:0, label:"0 · Nessuna",   cls:"chem-badge--0" },
@@ -9,8 +10,6 @@ const CHEM_LEVELS = [
   { value:3, label:"3 · Compagni",  cls:"chem-badge--3" },
   { value:4, label:"4 · Perfetti",  cls:"chem-badge--4" },
 ];
-
-const ROLE_ICON = { portiere:"🧤", difensore:"🛡️", centrocampista:"🔵", attaccante:"⚽" };
 
 // ── State ──────────────────────────────────────
 let allPlayers   = [];
@@ -74,7 +73,7 @@ function renderPills() {
   );
 
   if (!filtered.length) {
-    playerPills.innerHTML = `<p class="empty-state" style="grid-column:1/-1;padding:1.5rem">Nessun giocatore trovato.</p>`;
+    playerPills.innerHTML = `<p class="empty-state">Nessun giocatore trovato.</p>`;
     return;
   }
 
@@ -82,12 +81,12 @@ function renderPills() {
     const { ok, total } = getPlayerStatus(p.id);
     return `
     <button type="button"
-      class="pick-tile pick-tile--${p.ruoloPreferito} ${p.id === selectedId ? "pick-tile--active" : ""} ${!ok ? "pick-tile--warn" : ""}"
-      data-id="${p.id}"
-      title="${p.name}${!ok ? " · Relazioni insufficienti" : ""}">
-      <span class="pick-tile__avatar">${ROLE_ICON[p.ruoloPreferito] || "❓"}</span>
-      <span class="pick-tile__nick">${p.nickname}</span>
-      <span class="pick-tile__meta">${ok ? `✓ ${total} relazioni` : `⚠ ${total} relazioni`}</span>
+      class="pick-tile ${p.id === selectedId ? "pick-tile--active" : ""} ${!ok ? "pick-tile--warn" : ""}"
+      data-id="${p.id}" aria-pressed="${p.id === selectedId}"
+      title="${esc(p.name)}${!ok ? " · Relazioni insufficienti" : ""}">
+      ${roleChip(p.ruoloPreferito)}
+      <span class="pick-tile__nick">${esc(p.nickname)}</span>
+      <span class="pick-tile__meta">${ok ? `${total} relazioni` : "Da completare"}</span>
     </button>`;
   }).join("");
 
@@ -102,9 +101,9 @@ function selectPlayer(id) {
   const p = allPlayers.find(p => p.id === id);
   if (!p) return;
 
-  panelIcon.textContent = ROLE_ICON[p.ruoloPreferito] || "❓";
-  panelName.textContent = `${p.nickname}`;
-  panelMeta.textContent = `${p.name} · ${p.ruoloPreferito} · 🏟️ ${p.storico.partite} partite`;
+  panelIcon.innerHTML   = roleChip(p.ruoloPreferito, "role-chip--lg");
+  panelName.textContent = p.nickname;
+  panelMeta.textContent = `${p.name} · ${ROLES[p.ruoloPreferito]?.label ?? p.ruoloPreferito} · ${p.storico.partite} partite`;
 
   chemPanel.classList.remove("hidden");
   noPlayerHint.classList.add("hidden");
@@ -117,8 +116,8 @@ function selectPlayer(id) {
 function renderStatus(p) {
   const { ok, total, compagni, avversari } = getPlayerStatus(p.id);
   panelStatus.innerHTML = ok
-    ? `<span class="status-ok">✅ Requisiti soddisfatti (${total} relazioni)</span>`
-    : `<span class="status-warn">⚠️ Serve: 3 relazioni (2 compagni + 1 avversario) · Hai: ${compagni} compagni, ${avversari} avversari</span>`;
+    ? `<span class="status-ok">Requisiti soddisfatti · ${total} relazioni</span>`
+    : `<span class="status-warn">Ne servono 3 (2 compagni + 1 avversario). Hai: ${compagni} compagni, ${avversari} avversari</span>`;
 }
 
 // ── Render relation grid ───────────────────────
@@ -154,14 +153,14 @@ function renderRelGrid() {
     return `
     <div class="rel-card rel-card--${level}" data-id="${p.id}">
       <div class="rel-card__player">
-        <span class="rel-card__avatar">${ROLE_ICON[p.ruoloPreferito] || "❓"}</span>
+        ${roleChip(p.ruoloPreferito)}
         <div class="rel-card__who">
-          <div class="rel-card__nick">${p.nickname}</div>
-          <div class="rel-card__name">${p.name} · ${p.ruoloPreferito}</div>
+          <div class="rel-card__nick">${esc(p.nickname)}</div>
+          <div class="rel-card__name">${esc(p.name)}</div>
         </div>
         <span class="chem-badge ${lbl.cls}">${lbl.label}</span>
       </div>
-      <div class="rel-card__buttons" role="group" aria-label="Livello di intesa verso ${p.nickname}">
+      <div class="rel-card__buttons" role="group" aria-label="Livello di intesa verso ${esc(p.nickname)}">
         ${CHEM_LEVELS.map(c => `
           <button type="button"
             class="rel-level-btn rel-level-btn--${c.value} ${level === c.value ? "rel-level-btn--active" : ""}"
@@ -202,7 +201,7 @@ async function saveChemistry(idA, idB, level) {
     renderStatus(p);
     renderRelGrid();
     renderPills();
-    showToast(`Intesa aggiornata a livello ${level}`);
+    showToast(`Intesa aggiornata: livello ${level}.`);
   } catch (err) { showToast(err.message, "error"); }
 }
 

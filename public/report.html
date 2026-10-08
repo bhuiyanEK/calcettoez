@@ -3,141 +3,111 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Report Partita – CalcettoEz</title>
+  <title>Report partita – CalcettoEz</title>
+  <meta name="description" content="Inserisci risultato, voti, gol e assist: le statistiche dei giocatori si aggiornano da sole." />
+  <meta name="theme-color" content="#0c0e0b" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500;600;700&family=Outfit:wght@500;600;700;800&display=swap" />
   <link rel="stylesheet" href="/css/style.css" />
-  <style>
-    /* Rende le card dello storico visibilmente cliccabili */
-    .history-card {
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .history-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      border-color: #007bff; /* Usa il colore primario se definito */
-    }
-    .btn-group {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-    }
-  </style>
 </head>
 <body>
-  <nav class="nav">
-    <a href="/" class="nav__logo">⚽ CalcettoEz</a>
+  <a class="skip-link" href="#main">Vai al contenuto</a>
+  <nav class="nav" aria-label="Principale">
+    <a href="/" class="nav__logo">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="12.5"/><path d="M16 10.4l4.9 3.6-1.9 5.8h-6l-1.9-5.8z"/><path d="M16 3.5v6.9M20.9 14l6.4-2.1M19 19.8l3.9 5.4M13 19.8l-3.9 5.4M11.1 14L4.7 11.9"/></svg>
+      <span>Calcetto<b>Ez</b></span>
+    </a>
     <ul class="nav__links">
       <li><a href="/">Home</a></li>
       <li><a href="/players.html">Giocatori</a></li>
       <li><a href="/chemistry.html">Intesa</a></li>
       <li><a href="/matchmaker.html">Matchmaker</a></li>
-      <li><a href="/report.html" class="active">Report</a></li>
+      <li><a href="/report.html" class="active" aria-current="page">Report</a></li>
     </ul>
   </nav>
 
-  <div class="page-wrapper">
-    <div class="page-header">
+  <main id="main" class="page-wrapper">
+    <header class="page-header">
       <div>
-        <h1 class="page-header__title">📊 Report Partita</h1>
-        <p class="page-header__sub">Inserisci risultato, voti e statistiche. Clicca su una partita nello storico per visualizzarla o modificarla.</p>
+        <h1 class="page-header__title">Report partita</h1>
+        <p class="page-header__sub">Inserisci risultato, voti e statistiche. Clicca una partita nello storico per rivederla o modificarla.</p>
       </div>
-    </div>
+    </header>
 
-    <section class="section">
-      <h2 class="section__title">Setup Squadre</h2>
-      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
-        <button id="btn-load-teams" class="btn btn--primary">
-          ⚡ Carica dal Matchmaker
-        </button>
-        <button id="btn-manual-setup" class="btn btn--secondary">
-          ✏️ Seleziona manualmente
-        </button>
+    <section class="section" aria-labelledby="setup-title">
+      <h2 id="setup-title" class="section__title">Setup squadre</h2>
+      <div class="setup-actions">
+        <button id="btn-load-teams" class="btn btn--primary" type="button">Carica dal Matchmaker</button>
+        <button id="btn-manual-setup" class="btn btn--secondary" type="button">Seleziona manualmente</button>
       </div>
 
-      <div id="player-select-section" class="card hidden" style="margin-top:1rem">
-        <h3 style="margin-bottom:1rem">Seleziona 5 giocatori per squadra (Ctrl+click per selezione multipla)</h3>
+      <div id="player-select-section" class="card hidden">
+        <h3 style="margin-bottom:1rem">Seleziona 5 giocatori per squadra <span style="color:var(--text-3);font-weight:400">· Ctrl+click per la selezione multipla</span></h3>
         <div class="team-selects">
           <div class="form-group">
-            <label>🔵 Squadra A</label>
+            <label for="team-a-select"><span class="team-dot"></span> Squadra A</label>
             <select id="team-a-select" class="input" multiple></select>
           </div>
           <div class="form-group">
-            <label>🔴 Squadra B</label>
+            <label for="team-b-select"><span class="team-dot team-dot--b"></span> Squadra B</label>
             <select id="team-b-select" class="input" multiple></select>
           </div>
         </div>
-        <button id="btn-confirm-teams" class="btn btn--primary">✅ Conferma Squadre</button>
+        <button id="btn-confirm-teams" class="btn btn--primary" type="button">Conferma squadre</button>
       </div>
     </section>
 
-    <section id="report-form" class="section hidden">
+    <section id="report-form" class="section hidden" aria-label="Dati della partita">
 
-      <div class="card" style="margin-bottom:1.5rem">
-        <h2 style="margin-bottom:1rem">🏆 Risultato</h2>
+      <div class="card card--spaced">
+        <h2 style="margin-bottom:1.1rem">Risultato</h2>
         <div class="score-row">
-          <span class="score-row__label">🔵 Squadra A</span>
-          <input
-            id="score-a"
-            class="input score-input"
-            type="number"
-            min="0"
-            value="0"
-            placeholder="0"
-          />
+          <span class="score-row__label"><span class="team-dot"></span>Squadra A</span>
+          <input id="score-a" class="input score-input" type="number" min="0" value="0" placeholder="0" aria-label="Gol squadra A" />
           <span class="score-vs">–</span>
-          <input
-            id="score-b"
-            class="input score-input"
-            type="number"
-            min="0"
-            value="0"
-            placeholder="0"
-          />
-          <span class="score-row__label">Squadra B 🔴</span>
+          <input id="score-b" class="input score-input" type="number" min="0" value="0" placeholder="0" aria-label="Gol squadra B" />
+          <span class="score-row__label">Squadra B<span class="team-dot team-dot--b"></span></span>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:1.5rem">
-        <h2 style="margin-bottom:.5rem">⭐ Voti, Goal & Assist</h2>
-        <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.25rem">
-          <strong>🧤 Porta</strong> (facoltativo) → influenza la stat <em>porta</em><br>
-          <strong>🛡️ Difesa</strong> (obbligatorio) → influenza <em>difesa</em> e <em>fisico</em><br>
-          <strong>⚽ Attacco</strong> (obbligatorio) → influenza <em>tiro</em>, <em>passaggio</em>, <em>dribbling</em> e <em>velocità</em><br>
-          <span style="opacity:.7">Voto &gt; 7.5 → +0.2 &nbsp;|&nbsp; Voto &lt; 5 → -0.2 &nbsp;|&nbsp; 5–7.5 → nessuna variazione</span>
-        </p>
+      <div class="card card--spaced">
+        <h2 style="margin-bottom:.6rem">Voti, gol e assist</h2>
+        <div class="rating-legend">
+          <span><strong>Porta</strong> (facoltativo): influenza la stat <em>porta</em></span>
+          <span><strong>Difesa</strong> (obbligatorio): influenza <em>difesa</em> e <em>fisico</em></span>
+          <span><strong>Attacco</strong> (obbligatorio): influenza <em>tiro</em>, <em>passaggio</em>, <em>dribbling</em> e <em>velocità</em></span>
+          <span>Voto &gt; 7.5 → +0.2 · Voto &lt; 5 → −0.2 · da 5 a 7.5 nessuna variazione</span>
+        </div>
         <div id="ratings-section">
           <p class="empty-state">Configura le squadre per inserire i dati.</p>
         </div>
       </div>
 
       <div class="btn-group">
-        <button id="btn-submit-report" class="btn btn--success btn--lg">
-          💾 Salva Report
-        </button>
-        <button id="btn-cancel-edit" class="btn btn--secondary btn--lg hidden">
-          ❌ Annulla
-        </button>
+        <button id="btn-submit-report" class="btn btn--success btn--lg" type="button">Salva report</button>
+        <button id="btn-cancel-edit" class="btn btn--secondary btn--lg hidden" type="button">Annulla modifica</button>
       </div>
     </section>
 
-    <section class="section">
-      <h2 class="section__title">📅 Storico Partite</h2>
-      <div style="margin-bottom:1rem">
-        <input
-          id="history-search"
-          class="input"
-          type="text"
-          placeholder="🔍 Cerca per data (es. 05/2026 o 08/05/2026)..."
-          style="max-width:360px"
-        />
+    <section class="section" aria-labelledby="history-title">
+      <h2 id="history-title" class="section__title">Storico partite</h2>
+      <div class="history-toolbar">
+        <div class="search-wrap">
+          <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span>
+          <input id="history-search" class="input search-input" type="search" placeholder="Cerca per data, es. 05/2026 o 08/05/2026" autocomplete="off" aria-label="Cerca partita per data" />
+        </div>
       </div>
-      <div id="history-list" class="history-grid">
-        <p class="empty-state">Caricamento...</p>
+      <div id="history-list" class="history-grid" aria-live="polite">
+        <span class="skeleton skeleton--sm"></span>
+        <span class="skeleton skeleton--sm"></span>
+        <span class="skeleton skeleton--sm"></span>
       </div>
     </section>
-  </div>
+  </main>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script type="module" src="/js/report.js"></script>
 </body>

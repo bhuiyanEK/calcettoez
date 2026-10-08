@@ -1,33 +1,43 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Intesa – CalcettoEz</title>
-  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="description" content="Imposta l'intesa di ogni giocatore verso gli altri: il matchmaking ne usa la media." />
+  <meta name="theme-color" content="#0c0e0b" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500;600;700&family=Outfit:wght@500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav">
-    <a href="/" class="nav__logo">⚽ CalcettoEz</a>
+  <a class="skip-link" href="#main">Vai al contenuto</a>
+  <nav class="nav" aria-label="Principale">
+    <a href="/" class="nav__logo">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="12.5"/><path d="M16 10.4l4.9 3.6-1.9 5.8h-6l-1.9-5.8z"/><path d="M16 3.5v6.9M20.9 14l6.4-2.1M19 19.8l3.9 5.4M13 19.8l-3.9 5.4M11.1 14L4.7 11.9"/></svg>
+      <span>Calcetto<b>Ez</b></span>
+    </a>
     <ul class="nav__links">
       <li><a href="/">Home</a></li>
       <li><a href="/players.html">Giocatori</a></li>
-      <li><a href="/chemistry.html" class="active">Intesa</a></li>
+      <li><a href="/chemistry.html" class="active" aria-current="page">Intesa</a></li>
       <li><a href="/matchmaker.html">Matchmaker</a></li>
       <li><a href="/report.html">Report</a></li>
     </ul>
   </nav>
 
-  <div class="page-wrapper">
-    <div class="page-header">
+  <main id="main" class="page-wrapper">
+    <header class="page-header">
       <div>
-        <h1 class="page-header__title">🤝 Intesa tra giocatori</h1>
+        <h1 class="page-header__title">Intesa</h1>
         <p class="page-header__sub">Scegli un giocatore e imposta <strong>la sua</strong> intesa verso gli altri.</p>
       </div>
-    </div>
+    </header>
 
-    <!-- Legend -->
-    <div class="card chem-legend-card">
+    <!-- Legenda -->
+    <section class="card chem-legend-card" aria-label="Legenda livelli">
       <div class="chem-legend-row">
         <span class="chem-badge chem-badge--0">0 · Nessuna</span>
         <span class="chem-badge chem-badge--1">1 · Di vista</span>
@@ -36,62 +46,64 @@
         <span class="chem-badge chem-badge--4">4 · Perfetti</span>
       </div>
       <p class="chem-legend-note">
-        ⚠️ Ogni giocatore deve avere <strong>almeno 3 relazioni ≥ 1</strong>
-        (min. 2 da compagno/avversari + 1 ulteriore) per poter partecipare alle partite.
+        Ogni giocatore deve avere <strong>almeno 3 relazioni ≥ 1</strong>
+        (min. 2 da compagno e 1 ulteriore tra compagno o avversario) per poter partecipare alle partite.
       </p>
       <p class="chem-legend-note">
-        ↔️ L'intesa è <strong>personale</strong>: se Ontor dà 5 a Cyran e Cyran dà 3 a Ontor, ognuno vede il proprio valore.
-        Solo il matchmaking usa la media (5 + 3) / 2 = 4.
+        L'intesa è <strong>personale</strong>: se Ontor dà 5 a Cyran e Cyran dà 3 a Ontor, ognuno vede il proprio valore.
+        Solo il matchmaking usa la media: (5 + 3) / 2 = 4.
       </p>
-    </div>
+    </section>
 
-    <!-- Player picker -->
-    <div class="chem-picker">
+    <!-- Selezione giocatore -->
+    <section class="chem-picker" aria-labelledby="picker-title">
       <div class="chem-picker__head">
-        <span class="chem-picker__title">1 · Chi sta votando?</span>
-        <div class="search-wrap" style="max-width:300px">
-          <span class="search-icon">🔍</span>
-          <input id="player-search" class="input search-input" type="text" placeholder="Cerca giocatore…"/>
+        <h2 id="picker-title" class="chem-picker__title">1 · Chi sta votando?</h2>
+        <div class="search-wrap">
+          <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span>
+          <input id="player-search" class="input search-input" type="search" placeholder="Cerca giocatore" autocomplete="off" aria-label="Cerca giocatore" />
         </div>
       </div>
-      <div id="player-pills" class="pick-grid"></div>
-    </div>
+      <div id="player-pills" class="pick-grid">
+        <span class="skeleton skeleton--tile"></span>
+        <span class="skeleton skeleton--tile"></span>
+        <span class="skeleton skeleton--tile"></span>
+        <span class="skeleton skeleton--tile"></span>
+      </div>
+    </section>
 
-    <!-- Selected player panel -->
-    <div id="chem-panel" class="hidden">
+    <!-- Pannello del giocatore selezionato -->
+    <section id="chem-panel" class="hidden" aria-live="polite">
       <div class="chem-panel-header">
         <div class="chem-panel-player">
-          <span id="panel-icon" class="panel-icon">⚽</span>
+          <span id="panel-icon"></span>
           <div>
             <h2 id="panel-name">–</h2>
-            <p id="panel-meta" style="color:var(--text-muted);font-size:.85rem"></p>
+            <p id="panel-meta" style="font-size:.85rem"></p>
           </div>
         </div>
         <div id="panel-status" class="panel-status"></div>
       </div>
 
-      <!-- Filter bar -->
       <div class="chem-picker__head" style="margin-bottom:.75rem">
-        <span class="chem-picker__title">2 · Intesa verso gli altri giocatori</span>
+        <h2 class="chem-picker__title">2 · Intesa verso gli altri giocatori</h2>
       </div>
       <div class="chem-filter-bar">
-        <input id="rel-search" class="input input--sm" type="text" placeholder="Filtra per nome…" style="max-width:200px"/>
+        <input id="rel-search" class="input input--sm" type="search" placeholder="Filtra per nome" aria-label="Filtra per nome" style="max-width:200px" />
         <div class="chem-filter-btns">
-          <button class="btn btn--secondary btn--sm filter-btn active" data-filter="all">Tutti</button>
-          <button class="btn btn--secondary btn--sm filter-btn" data-filter="set">Con relazione</button>
-          <button class="btn btn--secondary btn--sm filter-btn" data-filter="unset">Senza relazione</button>
+          <button class="btn btn--secondary btn--sm filter-btn active" data-filter="all" type="button">Tutti</button>
+          <button class="btn btn--secondary btn--sm filter-btn" data-filter="set" type="button">Con relazione</button>
+          <button class="btn btn--secondary btn--sm filter-btn" data-filter="unset" type="button">Senza relazione</button>
         </div>
       </div>
 
       <div id="rel-grid" class="rel-grid"></div>
-    </div>
+    </section>
 
-    <div id="no-player-hint" class="empty-state" style="padding:3rem 0">
-      👆 Seleziona un giocatore per gestire le sue relazioni
-    </div>
-  </div>
+    <p id="no-player-hint" class="empty-state">Seleziona un giocatore per gestire le sue relazioni.</p>
+  </main>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="/js/chemistry-page.js"></script>
 </body>
 </html>

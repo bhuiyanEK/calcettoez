@@ -551,6 +551,15 @@ app.get("/role-weights",(_,res)=>res.json(ROLE_WEIGHTS));
 app.get("/forma-options",(_,res)=>res.json(FORMA_DELTA));
 
 // ─────────────────────────────────────────────
+// 404: pagina dedicata per le richieste HTML, JSON per le API
+// ─────────────────────────────────────────────
+app.use((req, res) => {
+  if (req.method === "GET" && req.accepts(["html", "json"]) === "html")
+    return res.status(404).sendFile(path.join(__dirname, "../public/404.html"));
+  res.status(404).json({ error: "Non trovato." });
+});
+
+// ─────────────────────────────────────────────
 // Start
 // ─────────────────────────────────────────────
 app.listen(PORT,()=>console.log(`\n🟢  FantaCalcetto Manager → http://localhost:${PORT}\n`));

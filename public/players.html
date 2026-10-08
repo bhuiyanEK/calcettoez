@@ -4,54 +4,64 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Giocatori – CalcettoEz</title>
+  <meta name="description" content="Rosa del gruppo: ruoli, attributi, forma e storico di ogni giocatore." />
+  <meta name="theme-color" content="#0c0e0b" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500;600;700&family=Outfit:wght@500;600;700;800&display=swap" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav">
-    <a href="/" class="nav__logo">⚽ CalcettoEz</a>
+  <a class="skip-link" href="#main">Vai al contenuto</a>
+  <nav class="nav" aria-label="Principale">
+    <a href="/" class="nav__logo">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="12.5"/><path d="M16 10.4l4.9 3.6-1.9 5.8h-6l-1.9-5.8z"/><path d="M16 3.5v6.9M20.9 14l6.4-2.1M19 19.8l3.9 5.4M13 19.8l-3.9 5.4M11.1 14L4.7 11.9"/></svg>
+      <span>Calcetto<b>Ez</b></span>
+    </a>
     <ul class="nav__links">
       <li><a href="/">Home</a></li>
-      <li><a href="/players.html" class="active">Giocatori</a></li>
+      <li><a href="/players.html" class="active" aria-current="page">Giocatori</a></li>
       <li><a href="/chemistry.html">Intesa</a></li>
       <li><a href="/matchmaker.html">Matchmaker</a></li>
       <li><a href="/report.html">Report</a></li>
     </ul>
   </nav>
 
-  <div class="page-wrapper">
-    <div class="page-header">
+  <main id="main" class="page-wrapper">
+    <header class="page-header">
       <div>
-        <h1 class="page-header__title">👥 Giocatori</h1>
-        <p class="page-header__sub">Gestisci la rosa. L'OVR per ruolo si calcola automaticamente.</p>
+        <h1 class="page-header__title">Giocatori</h1>
+        <p class="page-header__sub">Gestisci la rosa. L'OVR per ruolo si calcola dagli attributi.</p>
       </div>
-      <button id="btn-add-player" class="btn btn--primary btn--lg">➕ Aggiungi</button>
-    </div>
+      <button id="btn-add-player" class="btn btn--primary btn--lg" type="button">Aggiungi giocatore</button>
+    </header>
 
     <!-- ── Ricerca e filtri ── -->
     <div class="players-toolbar">
       <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input id="player-search" class="input search-input" type="search" placeholder="Cerca per nickname, nome o ruolo…" autocomplete="off" />
+        <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span>
+        <input id="player-search" class="input search-input" type="search" placeholder="Cerca per nickname, nome o ruolo" autocomplete="off" aria-label="Cerca giocatore" />
       </div>
       <div id="role-filter" class="seg" role="group" aria-label="Filtra per ruolo">
         <button type="button" class="seg__btn seg__btn--active" data-role="all">Tutti</button>
-        <button type="button" class="seg__btn" data-role="portiere" title="Portieri">🧤</button>
-        <button type="button" class="seg__btn" data-role="difensore" title="Difensori">🛡️</button>
-        <button type="button" class="seg__btn" data-role="centrocampista" title="Centrocampisti">🔵</button>
-        <button type="button" class="seg__btn" data-role="attaccante" title="Attaccanti">⚽</button>
+        <button type="button" class="seg__btn" data-role="portiere" title="Portieri">POR</button>
+        <button type="button" class="seg__btn" data-role="difensore" title="Difensori">DIF</button>
+        <button type="button" class="seg__btn" data-role="centrocampista" title="Centrocampisti">CEN</button>
+        <button type="button" class="seg__btn" data-role="attaccante" title="Attaccanti">ATT</button>
       </div>
       <select id="sort-by" class="input input--sm players-sort" aria-label="Ordina per">
-        <option value="nickname">Ordina: Nickname</option>
-        <option value="ovr">Ordina: OVR</option>
-        <option value="partite">Ordina: Partite</option>
+        <option value="nickname">Ordina per nickname</option>
+        <option value="ovr">Ordina per OVR</option>
+        <option value="partite">Ordina per partite</option>
       </select>
       <span id="players-count" class="players-count"></span>
     </div>
 
-    <!-- ── Add / Edit Form ── -->
-    <dialog id="form-section" class="modal">
+    <!-- ── Aggiungi / modifica ── -->
+    <dialog id="form-section" class="modal" aria-labelledby="form-title">
      <div class="modal__body">
-      <h2 id="form-title" class="form-section__title">Aggiungi Giocatore</h2>
+      <h2 id="form-title" class="form-section__title">Aggiungi giocatore</h2>
       <form id="player-form">
         <div class="form-grid">
 
@@ -67,15 +77,15 @@
           <div class="form-group">
             <label for="f-ruolo">Ruolo preferito *</label>
             <select id="f-ruolo" class="input" required>
-              <option value="">– Seleziona –</option>
-              <option value="portiere">🧤 Portiere</option>
-              <option value="difensore">🛡️ Difensore</option>
-              <option value="centrocampista">🔵 Centrocampista</option>
-              <option value="attaccante">⚽ Attaccante</option>
+              <option value="">Seleziona…</option>
+              <option value="portiere">Portiere</option>
+              <option value="difensore">Difensore</option>
+              <option value="centrocampista">Centrocampista</option>
+              <option value="attaccante">Attaccante</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="f-spirit">Spirito di Sacrificio</label>
+            <label for="f-spirit">Spirito di sacrificio</label>
             <div class="range-row">
               <input id="f-spirit" type="range" min="1" max="10" step="1" value="5" />
               <span id="f-spirit-val" class="range-val">5</span>
@@ -87,7 +97,7 @@
             <label class="toggle-label">
               <input id="f-unknown" type="checkbox" class="toggle-checkbox" />
               <span class="toggle-track"></span>
-              <span>Giocatore sconosciuto <span style="color:var(--text-muted);font-weight:400">(le stat vengono stimate)</span></span>
+              <span>Giocatore sconosciuto <span style="color:var(--text-3);font-weight:400">· le statistiche vengono stimate</span></span>
             </label>
           </div>
 
@@ -95,21 +105,21 @@
           <div id="unknown-block" class="form-group hidden" style="grid-column:1/-1">
             <label for="f-livello">Livello generale stimato</label>
             <select id="f-livello" class="input" style="max-width:260px">
-              <option value="scarso">😞 Scarso</option>
-              <option value="discreto" selected>😐 Discreto</option>
-              <option value="buono">🙂 Buono</option>
-              <option value="ottimo">😎 Ottimo</option>
-              <option value="fenomeno">🔥 Fenomeno</option>
+              <option value="scarso">Scarso</option>
+              <option value="discreto" selected>Discreto</option>
+              <option value="buono">Buono</option>
+              <option value="ottimo">Ottimo</option>
+              <option value="fenomeno">Fenomeno</option>
             </select>
-            <p style="font-size:.8rem;color:var(--text-muted);margin-top:.4rem">
-              Le statistiche vengono generate automaticamente con bias per ruolo. Si raffineranno dopo le partite.
+            <p style="font-size:.82rem;color:var(--text-3);margin-top:.4rem">
+              Le statistiche vengono generate con un bias per ruolo e si raffinano dopo le partite.
             </p>
           </div>
 
           <!-- Known: full stats -->
           <div id="stats-block" style="display:contents">
             <div class="form-divider"></div>
-            <span class="form-divider-label">⚙️ Statistiche (0–10)</span>
+            <span class="form-divider-label">Statistiche (0–10)</span>
 
             <div class="form-group">
               <label for="f-velocita">Velocità</label>
@@ -136,49 +146,51 @@
               <input id="f-dribbling" class="input" type="number" min="0" max="10" step="0.5" value="5" />
             </div>
             <div class="form-group">
-              <label for="f-porta">🧤 Porta <span style="font-size:.75rem;color:var(--text-muted);font-weight:400">— predisposizione al ruolo di portiere</span></label>
+              <label for="f-porta">Porta <span style="font-size:.75rem;color:var(--text-3);font-weight:400">· predisposizione al ruolo di portiere</span></label>
               <input id="f-porta" class="input" type="number" min="0" max="10" step="0.5" value="5" />
             </div>
 
             <div id="ovr-preview-row" class="ovr-pills-row">
-              <div class="ovr-pill"><span class="ovr-pill__icon">🧤</span><span class="ovr-pill__label">POR</span><span id="ovr-portiere" class="ovr-pill__value">5.0</span></div>
-              <div class="ovr-pill"><span class="ovr-pill__icon">🛡️</span><span class="ovr-pill__label">DIF</span><span id="ovr-difensore" class="ovr-pill__value">5.0</span></div>
-              <div class="ovr-pill"><span class="ovr-pill__icon">🔵</span><span class="ovr-pill__label">CEN</span><span id="ovr-centrocampista" class="ovr-pill__value">5.0</span></div>
-              <div class="ovr-pill"><span class="ovr-pill__icon">⚽</span><span class="ovr-pill__label">ATT</span><span id="ovr-attaccante" class="ovr-pill__value">5.0</span></div>
+              <div class="ovr-pill"><span class="ovr-pill__label">POR</span><span id="ovr-portiere" class="ovr-pill__value">5.0</span></div>
+              <div class="ovr-pill"><span class="ovr-pill__label">DIF</span><span id="ovr-difensore" class="ovr-pill__value">5.0</span></div>
+              <div class="ovr-pill"><span class="ovr-pill__label">CEN</span><span id="ovr-centrocampista" class="ovr-pill__value">5.0</span></div>
+              <div class="ovr-pill"><span class="ovr-pill__label">ATT</span><span id="ovr-attaccante" class="ovr-pill__value">5.0</span></div>
             </div>
           </div>
 
           <div class="form-actions">
-            <button type="submit" class="btn btn--primary">💾 Salva</button>
-            <button id="btn-cancel" type="button" class="btn btn--secondary">✕ Annulla</button>
-            <button id="btn-delete" type="button" class="btn btn--danger hidden" style="margin-left:auto">🗑️ Elimina giocatore</button>
+            <button type="submit" class="btn btn--primary">Salva</button>
+            <button id="btn-cancel" type="button" class="btn btn--secondary">Annulla</button>
+            <button id="btn-delete" type="button" class="btn btn--danger hidden" style="margin-left:auto">Elimina giocatore</button>
           </div>
         </div>
       </form>
      </div>
     </dialog>
 
-    <!-- ── Player list ── -->
-    <div id="player-list" class="cards-grid">
-      <p class="empty-state">Caricamento...</p>
+    <!-- ── Elenco ── -->
+    <div id="player-list" class="cards-grid" aria-live="polite">
+      <span class="skeleton skeleton--card"></span>
+      <span class="skeleton skeleton--card"></span>
+      <span class="skeleton skeleton--card"></span>
     </div>
 
     <!-- ── CSV (compatto) ── -->
     <details class="csv-details">
-      <summary>📂 Importa da CSV</summary>
+      <summary>Importa da CSV</summary>
       <div class="csv-details__body">
         <p>Importa più giocatori in una volta sola. Scarica il template per vedere il formato corretto.</p>
         <div class="csv-row">
-          <input id="csv-file" type="file" accept=".csv,text/csv" class="input input--file input--sm" />
-          <button id="btn-import"   class="btn btn--primary btn--sm">📥 Importa</button>
-          <button id="btn-template" class="btn btn--secondary btn--sm">⬇️ Template CSV</button>
+          <input id="csv-file" type="file" accept=".csv,text/csv" class="input input--file input--sm" aria-label="File CSV" />
+          <button id="btn-import"   class="btn btn--primary btn--sm" type="button">Importa</button>
+          <button id="btn-template" class="btn btn--secondary btn--sm" type="button">Scarica template</button>
         </div>
         <div id="import-status" style="margin-top:.6rem;font-size:.85rem"></div>
       </div>
     </details>
-  </div>
+  </main>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="/js/players.js"></script>
 </body>
 </html>
