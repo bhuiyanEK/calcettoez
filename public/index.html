@@ -26,6 +26,31 @@
       </div>
     </div>
 
+    <!-- ── Mini-classifiche ── -->
+    <section class="card lb-card" aria-labelledby="lb-heading">
+      <div class="lb-head">
+        <h2 id="lb-heading" class="lb-head__title">🏆 Classifiche</h2>
+        <div class="lb-filters">
+          <div id="lb-mode" class="seg" role="group" aria-label="Tipo di periodo">
+            <button type="button" class="seg__btn seg__btn--active" data-mode="season">Stagione</button>
+            <button type="button" class="seg__btn" data-mode="month">Mese</button>
+          </div>
+          <select id="lb-period" class="input input--sm lb-period" aria-label="Periodo"></select>
+        </div>
+      </div>
+
+      <div id="lb-tabs" class="seg seg--full" role="tablist" aria-label="Classifica">
+        <button type="button" role="tab" class="seg__btn seg__btn--active" data-metric="goals">⚽ Capocannoniere</button>
+        <button type="button" role="tab" class="seg__btn" data-metric="assists">🎯 Assistman</button>
+        <button type="button" role="tab" class="seg__btn" data-metric="rating">⭐ Voto medio</button>
+      </div>
+
+      <div id="lb-list" class="lb-list" aria-live="polite">
+        <p class="empty-state">Caricamento...</p>
+      </div>
+      <p id="lb-note" class="lb-note"></p>
+    </section>
+
     <div class="home-grid">
       <a href="/players.html" class="card home-card">
         <span class="home-card__icon">👥</span>
@@ -44,5 +69,6 @@
       </a>
     </div>
   </div>
+  <script type="module" src="/js/home.js"></script>
 </body>
 </html>

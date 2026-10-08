@@ -22,7 +22,7 @@
     <div class="page-header">
       <div>
         <h1 class="page-header__title">🤝 Intesa tra giocatori</h1>
-        <p class="page-header__sub">Seleziona un giocatore per gestire le sue relazioni.</p>
+        <p class="page-header__sub">Scegli un giocatore e imposta <strong>la sua</strong> intesa verso gli altri.</p>
       </div>
     </div>
 
@@ -39,15 +39,22 @@
         ⚠️ Ogni giocatore deve avere <strong>almeno 3 relazioni ≥ 1</strong>
         (min. 2 da compagno/avversari + 1 ulteriore) per poter partecipare alle partite.
       </p>
+      <p class="chem-legend-note">
+        ↔️ L'intesa è <strong>personale</strong>: se Ontor dà 5 a Cyran e Cyran dà 3 a Ontor, ognuno vede il proprio valore.
+        Solo il matchmaking usa la media (5 + 3) / 2 = 4.
+      </p>
     </div>
 
     <!-- Player picker -->
-    <div class="chem-picker-row">
-      <div class="search-wrap" style="flex:1;max-width:340px">
-        <span class="search-icon">🔍</span>
-        <input id="player-search" class="input search-input" type="text" placeholder="Cerca giocatore…"/>
+    <div class="chem-picker">
+      <div class="chem-picker__head">
+        <span class="chem-picker__title">1 · Chi sta votando?</span>
+        <div class="search-wrap" style="max-width:300px">
+          <span class="search-icon">🔍</span>
+          <input id="player-search" class="input search-input" type="text" placeholder="Cerca giocatore…"/>
+        </div>
       </div>
-      <div id="player-pills" class="player-pills"></div>
+      <div id="player-pills" class="pick-grid"></div>
     </div>
 
     <!-- Selected player panel -->
@@ -64,6 +71,9 @@
       </div>
 
       <!-- Filter bar -->
+      <div class="chem-picker__head" style="margin-bottom:.75rem">
+        <span class="chem-picker__title">2 · Intesa verso gli altri giocatori</span>
+      </div>
       <div class="chem-filter-bar">
         <input id="rel-search" class="input input--sm" type="text" placeholder="Filtra per nome…" style="max-width:200px"/>
         <div class="chem-filter-btns">

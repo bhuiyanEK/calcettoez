@@ -9,6 +9,9 @@
  *  - Bigger stacked formation display
  *  - Out-of-role player management with role selector
  *  - Number trimming (max 1 decimal)
+ *  - Griglia a card per la selezione giocatori
+ *  - Giocatori liberamente trascinabili sul campo (anche tra squadre = scambio)
+ *  - Esportazione formazione come immagine PNG (download / condivisione)
  */
 import { PlayersAPI } from "./api.js";
 
@@ -58,6 +61,10 @@ let roleMappingB = {};
 
 let pendingSwapFn = null;
 
+// Posizioni libere sul campo: { A: { playerId: [x%, y%] }, B: {...} } + cache delle posizioni effettive
+let customPos   = { A: {}, B: {} };
+const layoutCache = { A: {}, B: {} };
+
 // ── Constants ─────────────────────────────────
 const FORMA_OPTIONS = [
   { value:"infortunato",  label:"🩹 Infort.",    delta:-2.5 },
@@ -74,7 +81,15 @@ const ROLE_ICON   = { portiere:"🧤", difensore:"🛡️", centrocampista:"🔵
 const ROLE_LABELS = { portiere:"Portiere", difensore:"Difensore", centrocampista:"Centrocampista", attaccante:"Attaccante" };
 const ROLE_ORDER  = ["portiere","difensore","centrocampista","attaccante"];
 const CHEMISTRY_BONUS = { 0:0, 1:0.3, 2:0.8, 3:2.0, 4:3.5 };
+// L'intesa di coppia è la media dei due livelli asimmetrici → può essere frazionaria: bonus interpolato
+const bonusOf = lv => {
+  const lo = Math.floor(lv), hi = Math.ceil(lv);
+  if (lo === hi) return CHEMISTRY_BONUS[lo] ?? 0;
+  return CHEMISTRY_BONUS[lo] + (CHEMISTRY_BONUS[hi] - CHEMISTRY_BONUS[lo]) * (lv - lo);
+};
+const esc = str => String(str).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const TEAM_COLORS = { A:"#3d7eff", B:"#e74c3c" };
+const PITCH_W = 420, PITCH_H = 560;
 
 // ── Number formatting ─────────────────────────
 /** Round to 1 decimal, strip trailing ".0" */
@@ -204,7 +219,7 @@ function effectiveOVR(p) {
 
 function computeStrength(team, chemPairs) {
   const base  = team.reduce((s, p) => s + effectiveOVR(p), 0);
-  const bonus = (chemPairs||[]).reduce((s, c) => s + (CHEMISTRY_BONUS[c.level]||0), 0);
+  const bonus = (chemPairs||[]).reduce((s, c) => s + bonusOf(c.level), 0);
   return Math.round((base + bonus) * 10) / 10;
 }
 
@@ -308,7 +323,17 @@ function setCaptain(playerId, team) {
   renderList();
 }
 
-// ── Player selection list ─────────────────────
+// ── Player selection grid ─────────────────────
+function togglePlayer(id, checked) {
+  if (checked) checkedIds.add(id);
+  else {
+    checkedIds.delete(id);
+    if (captainA===id) { captainA=null; renderCaptainSlot("a",null); }
+    if (captainB===id) { captainB=null; renderCaptainSlot("b",null); }
+  }
+  updateCounter(); renderList();
+}
+
 function renderList() {
   const q = searchInput.value.trim().toLowerCase();
   const filtered = allPlayers.filter(p =>
@@ -316,92 +341,102 @@ function renderList() {
     p.name.toLowerCase().includes(q) || p.ruoloPreferito.toLowerCase().includes(q)
   );
   if (!filtered.length) {
-    playerCheckboxList.innerHTML = `<p class="empty-state">Nessun giocatore trovato.</p>`; return;
+    playerCheckboxList.innerHTML = `<p class="empty-state" style="grid-column:1/-1">Nessun giocatore trovato.</p>`; return;
   }
-  filtered.sort((a,b) => {
-    const ac=checkedIds.has(a.id)?1:0, bc=checkedIds.has(b.id)?1:0;
-    return bc!==ac ? bc-ac : b.storico.partite - a.storico.partite;
-  });
+  // Ordine stabile (per partite): le card non "saltano" quando le selezioni
+  filtered.sort((a,b) => b.storico.partite - a.storico.partite || a.nickname.localeCompare(b.nickname));
 
   playerCheckboxList.innerHTML = filtered.map(p => {
     const f      = FORMA_OPTIONS.find(o=>o.value===p.formaAttuale)||FORMA_OPTIONS[2];
     const vals   = Object.values(p.ovr);
     const base   = vals.reduce((s,v)=>s+v,0)/vals.length;
     const eff    = Math.min(10, Math.max(0, Math.round((base+f.delta)*10)/10));
-    const ds     = f.delta !== 0 ? ` (${f.delta>0?"+":""}${f.delta})` : "";
+    const delta  = f.delta !== 0
+      ? `<small class="${f.delta>0?"up":"down"}">${f.delta>0?"+":""}${f.delta}</small>` : "";
+    const sel    = checkedIds.has(p.id);
     const isCapA = captainA===p.id, isCapB = captainB===p.id;
+    const tip    = `${p.name} · ${ROLE_LABELS[p.ruoloPreferito]||p.ruoloPreferito} · ${p.storico.partite} partite`;
     return `
-    <div class="player-checkbox-item ${checkedIds.has(p.id)?"is-selected":""}" id="cb-item-${p.id}">
-      <input type="checkbox" class="player-checkbox" id="cb-${p.id}" value="${p.id}" ${checkedIds.has(p.id)?"checked":""}/>
-      <label for="cb-${p.id}" class="cb-label">
-        <span class="checkbox-icon">${ROLE_ICON[p.ruoloPreferito]||"❓"}</span>
-        <span class="checkbox-name">${p.nickname}${p.isUnknown?` <span class="badge badge--unknown" style="font-size:.65rem">👤</span>`:""}</span>
-        <span class="cb-partite">🏟️ ${p.storico.partite}</span>
-        <span class="checkbox-ovr">${fmt(eff)}${ds}</span>
-      </label>
-      <div class="forma-inline">
-        ${isCapA ? `<span style="font-size:.75rem;font-weight:700;color:var(--accent)">🔵 Cap A</span>` : ""}
-        ${isCapB ? `<span style="font-size:.75rem;font-weight:700;color:var(--danger)">🔴 Cap B</span>` : ""}
-        ${checkedIds.has(p.id) && !isCapA && !isCapB ? `
-          <button class="cb-captain-btn" data-pid="${p.id}" data-team="a">Cap A</button>
-          <button class="cb-captain-btn" data-pid="${p.id}" data-team="b">Cap B</button>
-        ` : ""}
-        <span class="forma-badge ${FORMA_CLS[p.formaAttuale]||"forma--grey"}" style="font-size:.72rem">${f.label}</span>
-        <select class="forma-select input input--sm" data-player-id="${p.id}">
+    <div class="pcard ${sel?"is-selected":""}" data-id="${p.id}" role="checkbox" aria-checked="${sel}" tabindex="0" title="${esc(tip)}">
+      <div class="pcard__top">
+        <span class="pcard__name">${ROLE_ICON[p.ruoloPreferito]||"❓"} ${esc(p.nickname)}${p.isUnknown?" 👤":""}</span>
+        <span class="pcard__ovr">${fmt(eff)}${delta}</span>
+      </div>
+      ${sel ? `<div class="pcard__cap">
+        ${isCapA ? `<span style="color:var(--accent)">🔵 Capitano A</span>` : ""}
+        ${isCapB ? `<span style="color:var(--danger)">🔴 Capitano B</span>` : ""}
+        ${!isCapA && !isCapB ? `
+          <button type="button" class="cb-captain-btn" data-pid="${p.id}" data-team="a">Cap A</button>
+          <button type="button" class="cb-captain-btn" data-pid="${p.id}" data-team="b">Cap B</button>` : ""}
+      </div>` : ""}
+      <div class="pcard__bottom">
+        <select class="pcard__forma forma-badge ${FORMA_CLS[p.formaAttuale]||"forma--grey"}" data-player-id="${p.id}" aria-label="Forma di ${esc(p.nickname)}">
           ${FORMA_OPTIONS.map(o=>`<option value="${o.value}" ${o.value===p.formaAttuale?"selected":""}>${o.label}</option>`).join("")}
         </select>
       </div>
     </div>`;
   }).join("");
-
-  playerCheckboxList.querySelectorAll(".player-checkbox").forEach(cb => {
-    cb.addEventListener("change", () => {
-      if (cb.checked) checkedIds.add(cb.value);
-      else {
-        checkedIds.delete(cb.value);
-        if (captainA===cb.value) { captainA=null; renderCaptainSlot("a",null); }
-        if (captainB===cb.value) { captainB=null; renderCaptainSlot("b",null); }
-      }
-      document.getElementById(`cb-item-${cb.value}`)?.classList.toggle("is-selected", cb.checked);
-      updateCounter(); renderList();
-    });
-  });
-
-  playerCheckboxList.querySelectorAll(".cb-captain-btn").forEach(btn => {
-    btn.addEventListener("click", e => { e.preventDefault(); setCaptain(btn.dataset.pid, btn.dataset.team); });
-  });
-
-  playerCheckboxList.querySelectorAll(".forma-select").forEach(sel =>
-    sel.addEventListener("change", async e => {
-      try {
-        await fetch(`/players/${e.target.dataset.playerId}`, {
-          method:"PUT", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ formaAttuale: e.target.value }),
-        });
-        const p = allPlayers.find(p=>p.id===e.target.dataset.playerId);
-        if (p) p.formaAttuale = e.target.value;
-        renderList();
-      } catch(err) { showToast(err.message,"error"); }
-    })
-  );
 }
 
+// Delegation: il contenitore resta lo stesso, le card vengono ricreate
+playerCheckboxList.addEventListener("click", e => {
+  const capBtn = e.target.closest(".cb-captain-btn");
+  if (capBtn) { setCaptain(capBtn.dataset.pid, capBtn.dataset.team); return; }
+  if (e.target.closest("select")) return;
+  const card = e.target.closest(".pcard");
+  if (card) togglePlayer(card.dataset.id, !checkedIds.has(card.dataset.id));
+});
+
+playerCheckboxList.addEventListener("keydown", e => {
+  if ((e.key !== "Enter" && e.key !== " ") || e.target.closest("select,button")) return;
+  const card = e.target.closest(".pcard");
+  if (!card) return;
+  e.preventDefault();
+  const id = card.dataset.id;
+  togglePlayer(id, !checkedIds.has(id));
+  playerCheckboxList.querySelector(`.pcard[data-id="${id}"]`)?.focus();   // mantiene il focus da tastiera
+});
+
+playerCheckboxList.addEventListener("change", async e => {
+  const sel = e.target.closest(".pcard__forma");
+  if (!sel) return;
+  try {
+    const res = await fetch(`/players/${sel.dataset.playerId}`, {
+      method:"PUT", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ formaAttuale: sel.value }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || `HTTP ${res.status}`);
+    const p = allPlayers.find(p=>p.id===sel.dataset.playerId);
+    if (p) p.formaAttuale = sel.value;
+    renderList();
+  } catch(err) { showToast(err.message,"error"); renderList(); }
+});
+
 // ── Formation SVG ─────────────────────────────
-function renderFormationSVG(players, teamKey, chemPairs, captainId, formationName, roleMapping) {
-  const W = 420, H = 560;
+function renderFormationSVG(players, teamKey, chemPairs, captainId, formationName, roleMapping, exportMode = false) {
+  const W = PITCH_W, H = PITCH_H;
   const col   = TEAM_COLORS[teamKey];
   const n     = players.length;
   const slots = buildFormationSlots(players, formationName, n, roleMapping);
 
-  // Chemistry lines (level ≥ 3)
+  // Posizioni libere (drag) sovrascrivono quelle del modulo; la cache serve a drag/scambio
+  layoutCache[teamKey] = {};
+  for (const sl of slots) {
+    if (!sl.player) continue;
+    const custom = customPos[teamKey][sl.player.id];
+    if (custom) [sl.x, sl.y] = custom;
+    layoutCache[teamKey][sl.player.id] = [sl.x, sl.y];
+  }
+
+  // Chemistry lines (livello medio ≥ 3)
   const chemLines = (chemPairs||[]).filter(c=>c.level>=3).map(c=>{
     const pA = players.find(p=>p.nickname===c.a), pB = players.find(p=>p.nickname===c.b);
     if (!pA||!pB) return "";
     const sa = slots.find(s=>s.player?.id===pA.id), sb = slots.find(s=>s.player?.id===pB.id);
     if (!sa||!sb) return "";
     return `<line x1="${sa.x*W/100}" y1="${sa.y*H/100}" x2="${sb.x*W/100}" y2="${sb.y*H/100}"
-      stroke="${col}" stroke-width="${c.level===4?2.5:1.5}"
-      stroke-dasharray="${c.level===4?"none":"5,3"}" stroke-opacity="${c.level===4?.75:.4}"/>`;
+      stroke="${col}" stroke-width="${c.level>=3.5?2.5:1.5}"
+      stroke-dasharray="${c.level>=3.5?"none":"5,3"}" stroke-opacity="${c.level>=3.5?.75:.4}"/>`;
   }).join("");
 
   // Player nodes
@@ -415,7 +450,9 @@ function renderFormationSVG(players, teamKey, chemPairs, captainId, formationNam
       </g>`;
     }
     const p      = s.player;
-    const nick   = p.nickname.length > 8 ? p.nickname.slice(0,7)+"…" : p.nickname;
+    // Nell'immagine esportata il nome è sempre completo (font ridotto se lungo)
+    const nick   = exportMode ? p.nickname : (p.nickname.length > 8 ? p.nickname.slice(0,7)+"…" : p.nickname);
+    const nickFs = exportMode ? Math.min(11, Math.max(6.5, 46 / (p.nickname.length * 0.62))) : 11;
     const forma  = {infortunato:"🩹",scarsa_forma:"😕",normale:"",in_forma:"💪",grande_forma:"🔥"}[p.formaAttuale]||"";
     const isCap  = p.id === captainId;
     const isOut  = s.outOfRole;
@@ -430,7 +467,7 @@ function renderFormationSVG(players, teamKey, chemPairs, captainId, formationNam
       ${isCap?`<circle cx="${cx}" cy="${cy}" r="${r+6}" fill="none" stroke="#ffd70050" stroke-width="1.5" stroke-dasharray="4,3"/>`: ""}
       ${isOut&&!isCap?`<circle cx="${cx}" cy="${cy}" r="${r+5}" fill="none" stroke="#f5a62350" stroke-width="1.5" stroke-dasharray="4,3"/>`: ""}
       <text x="${cx}" y="${cy-3}" text-anchor="middle" dominant-baseline="middle"
-        font-size="11" font-weight="700" fill="white" font-family="Inter,sans-serif">${nick}</text>
+        font-size="${nickFs}" font-weight="700" fill="white" font-family="Inter,sans-serif">${esc(nick)}</text>
       <text x="${cx}" y="${cy+10}" text-anchor="middle" dominant-baseline="middle"
         font-size="9.5" fill="rgba(255,255,255,.7)" font-family="Inter,sans-serif">${ovrVal}</text>
       ${isCap?`<text x="${cx+r-2}" y="${cy-r+2}" font-size="13">🏅</text>`: ""}
@@ -439,7 +476,7 @@ function renderFormationSVG(players, teamKey, chemPairs, captainId, formationNam
     </g>`;
   }).join("");
 
-  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="formation-svg">
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="formation-svg" data-team="${teamKey}">
     <defs>
       <linearGradient id="grass-${teamKey}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#1e5c1e"/>
@@ -535,8 +572,9 @@ function renderTeamPanel(containerId, players, teamKey, chemPairs) {
     chemHtml = `<div class="chem-pairs-block">
       <div class="chem-pairs-title">🤝 Intesa</div>
       ${chemPairs.map(c=>{
-        const stars = "★".repeat(c.level)+"☆".repeat(4-c.level);
-        const cls   = c.level>=3?"chem-pair--high":c.level===2?"chem-pair--mid":"chem-pair--low";
+        const lv    = Math.round(c.level);
+        const stars = "★".repeat(lv)+"☆".repeat(4-lv);
+        const cls   = c.level>=3?"chem-pair--high":c.level>=2?"chem-pair--mid":"chem-pair--low";
         return `<div class="chem-pair ${cls}">
           <span>${c.a} ↔ ${c.b}</span>
           <span>${stars} <span class="chem-bonus">+${fmt(c.bonus)}</span></span>
@@ -550,9 +588,12 @@ function renderTeamPanel(containerId, players, teamKey, chemPairs) {
     <div class="formation-wrap">${renderFormationSVG(players, teamKey, chemPairs, captainId, curFormation, roleMapping)}</div>
     <div class="team-list-below">${listHtml}${chemHtml}</div>`;
 
+  wirePitchDrag(container, containerId, players, teamKey, chemPairs);
+
   // Formation change
   container.querySelector(".formation-select-ctrl").addEventListener("change", e => {
     const nf = e.target.value;
+    customPos[teamKey] = {};   // nuovo modulo = posizioni di default
     if (teamKey==="A") { formationA = nf; roleMappingA = {}; }
     else               { formationB = nf; roleMappingB = {}; }
     renderTeamPanel(containerId, players, teamKey, chemPairs);
@@ -612,6 +653,118 @@ function renderTeamPanel(containerId, players, teamKey, chemPairs) {
   });
 }
 
+// ── Pitch: trascinamento libero dei giocatori ──
+const clampPct = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function pitchSvgs() { return [...document.querySelectorAll("svg.formation-svg[data-team]")]; }
+
+function pitchUnder(clientX, clientY) {
+  return pitchSvgs().find(svg => {
+    const r = svg.getBoundingClientRect();
+    return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+  }) || null;
+}
+
+function toPitchCoords(svg, clientX, clientY) {
+  const pt = svg.createSVGPoint();
+  pt.x = clientX; pt.y = clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+/** Giocatore della squadra indicata più vicino al punto (coordinate SVG); null se troppo lontano */
+function nearestNode(teamKey, x, y, maxDist = 70) {
+  let best = null, bestD = maxDist;
+  for (const [pid, [px, py]] of Object.entries(layoutCache[teamKey])) {
+    const d = Math.hypot(px * PITCH_W / 100 - x, py * PITCH_H / 100 - y);
+    if (d < bestD) { best = pid; bestD = d; }
+  }
+  return best;
+}
+
+function wirePitchDrag(container, containerId, players, teamKey, chemPairs) {
+  const svg = container.querySelector("svg.formation-svg");
+  if (!svg) return;
+  const otherKey = teamKey === "A" ? "B" : "A";
+
+  svg.querySelectorAll(".formation-node").forEach(node => {
+    node.addEventListener("pointerdown", e => {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault();
+
+      const pid    = node.dataset.pid;
+      const origin = toPitchCoords(svg, e.clientX, e.clientY);
+      let moved = false, targetPid = null;
+
+      node.setPointerCapture(e.pointerId);
+
+      const clearHover = () => {
+        pitchSvgs().forEach(s => s.classList.remove("pitch-drop"));
+        document.querySelectorAll(".formation-node.swap-target").forEach(n => n.classList.remove("swap-target"));
+      };
+
+      const onMove = ev => {
+        const p  = toPitchCoords(svg, ev.clientX, ev.clientY);
+        const dx = p.x - origin.x, dy = p.y - origin.y;
+        if (!moved && Math.hypot(dx, dy) < 4) return;
+        if (!moved) { moved = true; node.classList.add("is-dragging"); }
+        node.setAttribute("transform", `translate(${dx} ${dy})`);
+
+        clearHover();
+        const hoverSvg = pitchUnder(ev.clientX, ev.clientY);
+        targetPid = null;
+        if (hoverSvg && hoverSvg.dataset.team === otherKey) {
+          hoverSvg.classList.add("pitch-drop");
+          const q = toPitchCoords(hoverSvg, ev.clientX, ev.clientY);
+          targetPid = nearestNode(otherKey, q.x, q.y);
+          if (targetPid) hoverSvg.querySelector(`.formation-node[data-pid="${targetPid}"]`)?.classList.add("swap-target");
+        }
+      };
+
+      const finish = ev => {
+        node.removeEventListener("pointermove", onMove);
+        node.removeEventListener("pointerup", finish);
+        node.removeEventListener("pointercancel", finish);
+        clearHover();
+        if (!moved) return;
+
+        const rerender = () => renderTeamPanel(containerId, players, teamKey, chemPairs);
+        if (ev.type === "pointercancel") { rerender(); return; }
+
+        const dropSvg = pitchUnder(ev.clientX, ev.clientY);
+
+        // Rilasciato sul proprio campo → nuova posizione libera
+        if (dropSvg === svg) {
+          const q = toPitchCoords(svg, ev.clientX, ev.clientY);
+          customPos[teamKey][pid] = [
+            clampPct(q.x / PITCH_W * 100, 8, 92),
+            clampPct(q.y / PITCH_H * 100, 7, 93),
+          ];
+          rerender();
+          return;
+        }
+
+        // Rilasciato sull'altro campo → scambio con il giocatore più vicino
+        if (dropSvg && dropSvg.dataset.team === otherKey) {
+          const from = (teamKey === "A" ? teamA : teamB).find(p => p.id === pid);
+          const to   = targetPid ? (otherKey === "A" ? teamA : teamB).find(p => p.id === targetPid) : null;
+          if (!from || !to) { showToast("Rilascia il giocatore sopra uno dell'altra squadra per scambiarli.", "error"); rerender(); return; }
+          if (lockedPlayerIds.has(from.id) || lockedPlayerIds.has(to.id)) {
+            showToast("Uno dei due giocatori è bloccato 🔒", "error"); rerender(); return;
+          }
+          attemptSwap(from, teamKey, to, otherKey, { inheritPos: true });
+          return;
+        }
+
+        rerender();   // fuori dai campi: torna al suo posto
+      };
+
+      node.addEventListener("pointermove", onMove);
+      node.addEventListener("pointerup", finish);
+      node.addEventListener("pointercancel", finish);
+    });
+  });
+}
+
 function renderBothPanels() {
   renderTeamPanel("team-a-panel", teamA, "A", chemistryA);
   renderTeamPanel("team-b-panel", teamB, "B", chemistryB);
@@ -637,7 +790,7 @@ function handleCardClick(player, team) {
   }
 }
 
-function attemptSwap(playerFrom, teamFrom, playerTo, teamTo) {
+function attemptSwap(playerFrom, teamFrom, playerTo, teamTo, opts = {}) {
   const fromCap = captainA===playerFrom.id||captainB===playerFrom.id;
   const toCap   = captainA===playerTo.id  ||captainB===playerTo.id;
   if (fromCap||toCap) {
@@ -645,13 +798,13 @@ function attemptSwap(playerFrom, teamFrom, playerTo, teamTo) {
       ? `"${playerFrom.nickname}" è il capitano. Vuoi procedere con lo scambio?`
       : `"${playerTo.nickname}" è il capitano. Vuoi procedere con lo scambio?`;
     captainConfirmOverlay.classList.remove("hidden");
-    pendingSwapFn = () => executeSwap(playerFrom, teamFrom, playerTo, teamTo);
+    pendingSwapFn = () => executeSwap(playerFrom, teamFrom, playerTo, teamTo, opts);
   } else {
-    executeSwap(playerFrom, teamFrom, playerTo, teamTo);
+    executeSwap(playerFrom, teamFrom, playerTo, teamTo, opts);
   }
 }
 
-function executeSwap(playerFrom, teamFrom, playerTo, teamTo) {
+function executeSwap(playerFrom, teamFrom, playerTo, teamTo, opts = {}) {
   if (teamFrom==="A") {
     const iA=teamA.findIndex(p=>p.id===playerFrom.id), iB=teamB.findIndex(p=>p.id===playerTo.id);
     if (iA===-1||iB===-1) return;
@@ -668,6 +821,15 @@ function executeSwap(playerFrom, teamFrom, playerTo, teamTo) {
   [playerFrom.id, playerTo.id].forEach(id => {
     delete roleMappingA[id]; delete roleMappingB[id];
   });
+
+  // Posizioni sul campo: con il drag ognuno prende il posto dell'altro, altrimenti si riparte dal modulo
+  const fromPos = layoutCache[teamFrom][playerFrom.id];
+  const toPos   = layoutCache[teamTo][playerTo.id];
+  for (const id of [playerFrom.id, playerTo.id]) { delete customPos.A[id]; delete customPos.B[id]; }
+  if (opts.inheritPos && fromPos && toPos) {
+    customPos[teamTo][playerFrom.id] = [...toPos];
+    customPos[teamFrom][playerTo.id] = [...fromPos];
+  }
 
   cancelSwap();
   renderBothPanels();
@@ -748,6 +910,7 @@ async function generate() {
     lastResult=result;
 
     // Reset formation & overrides
+    customPos = { A: {}, B: {} };
     formationA = defaultFormation(teamA.length);
     formationB = defaultFormation(teamB.length);
     roleMappingA = {}; roleMappingB = {};
@@ -768,6 +931,103 @@ async function generate() {
   }
 }
 
+// ── Export formazione come immagine ───────────
+/** SVG autonomo (niente CSS esterno) con entrambi i campi, pronto per essere rasterizzato */
+function buildExportSVG() {
+  const PAD = 28, GAP = 24, HEAD = 84, TITLE = 46, FOOT = 44;
+  const W = PAD * 2 + PITCH_W * 2 + GAP;
+  const H = HEAD + TITLE + PITCH_H + FOOT;
+  const FONT = "Inter, 'Segoe UI', Arial, sans-serif";
+
+  const strA = computeStrength(teamA, chemistryA);
+  const strB = computeStrength(teamB, chemistryB);
+  const fA = formationA || defaultFormation(teamA.length);
+  const fB = formationB || defaultFormation(teamB.length);
+
+  const pitchY = HEAD + TITLE;
+  const xA = PAD, xB = PAD + PITCH_W + GAP;
+  const pitch = (team, key, chem, cap, form, map, x) =>
+    renderFormationSVG(team, key, chem, cap, form, map, true)
+      .replace("<svg ", `<svg x="${x}" y="${pitchY}" width="${PITCH_W}" height="${PITCH_H}" `);
+
+  const date = new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const n = teamA.length;
+  const header = (x, label, str, col) => `
+    <text x="${x}" y="${HEAD + 30}" font-family="${FONT}" font-size="20" font-weight="800" fill="${col}">${label}</text>
+    <text x="${x + PITCH_W}" y="${HEAD + 30}" text-anchor="end" font-family="${FONT}" font-size="15" font-weight="700" fill="#8892a4">Forza ${fmt(str)}</text>`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <rect width="${W}" height="${H}" fill="#0f1117"/>
+    <text x="${W / 2}" y="40" text-anchor="middle" font-family="${FONT}" font-size="28" font-weight="800" fill="#e8eaf0">⚽ CalcettoEz · Formazioni</text>
+    <text x="${W / 2}" y="66" text-anchor="middle" font-family="${FONT}" font-size="14" fill="#8892a4">${esc(date)} · ${n} vs ${n}</text>
+    ${header(xA, "🔵 Squadra A", strA, TEAM_COLORS.A)}
+    ${header(xB, "🔴 Squadra B", strB, TEAM_COLORS.B)}
+    ${pitch(teamA, "A", chemistryA, captainA, fA, roleMappingA, xA)}
+    ${pitch(teamB, "B", chemistryB, captainB, fB, roleMappingB, xB)}
+    <text x="${W / 2}" y="${H - 16}" text-anchor="middle" font-family="${FONT}" font-size="13" fill="#8892a4">Δ forza: ${fmt(Math.abs(strA - strB))}</text>
+  </svg>`;
+}
+
+/** Rasterizza l'SVG in un PNG (2x per restare nitido su chat/schermi retina) */
+async function teamsImageBlob(scale = 2) {
+  const svg = buildExportSVG();
+  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+  try {
+    const img = new Image();
+    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = () => reject(new Error("Impossibile generare l'immagine.")); img.src = url; });
+    const canvas = document.createElement("canvas");
+    canvas.width  = img.naturalWidth  * scale;
+    canvas.height = img.naturalHeight * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    if (!blob) throw new Error("Impossibile generare l'immagine.");
+    return blob;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+const imageFilename = () => `formazioni-${new Date().toISOString().slice(0, 10)}.png`;
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+document.getElementById("btn-export-img").addEventListener("click", async () => {
+  if (!teamA.length) return;
+  try {
+    downloadBlob(await teamsImageBlob(), imageFilename());
+    showToast("Immagine scaricata!");
+  } catch (err) { showToast(err.message, "error"); }
+});
+
+const btnShareImg = document.getElementById("btn-share-img");
+// "Condividi" compare solo dove il browser sa condividere file (tipicamente smartphone)
+if (navigator.canShare?.({ files: [new File([""], "x.png", { type: "image/png" })] })) {
+  btnShareImg.classList.remove("hidden");
+  btnShareImg.addEventListener("click", async () => {
+    if (!teamA.length) return;
+    try {
+      const blob = await teamsImageBlob();
+      await navigator.share({
+        files: [new File([blob], imageFilename(), { type: "image/png" })],
+        title: "Formazioni CalcettoEz",
+      });
+    } catch (err) {
+      if (err.name === "AbortError") return;   // l'utente ha chiuso il foglio di condivisione
+      showToast("Condivisione non riuscita: usa «Scarica immagine».", "error");
+    }
+  });
+}
+
 // ── Event listeners ───────────────────────────
 btnGenerate.addEventListener("click", generate);
 document.getElementById("btn-regen").addEventListener("click", generate);
@@ -777,6 +1037,7 @@ document.getElementById("btn-reset-teams").addEventListener("click", () => {
   teamA=[...origTeamA]; teamB=[...origTeamB];
   chemistryA=lastResult.chemistryA||[]; chemistryB=lastResult.chemistryB||[];
   lockedPlayerIds.clear();
+  customPos = { A: {}, B: {} };
   roleMappingA={}; roleMappingB={};
   formationA=defaultFormation(teamA.length);
   formationB=defaultFormation(teamB.length);

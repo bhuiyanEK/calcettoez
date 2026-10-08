@@ -6,6 +6,45 @@
   <title>Matchmaker – CalcettoEz</title>
   <link rel="stylesheet" href="/css/style.css"/>
   <style>
+    /* ── Griglia selezione giocatori ── */
+    .pgrid {
+      display: grid; gap: .6rem; margin-bottom: 1rem;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    @media (max-width: 1100px) { .pgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+    @media (max-width: 900px)  { .pgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @media (max-width: 700px)  { .pgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 480px)  { .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    .pcard {
+      display: flex; flex-direction: column; justify-content: space-between; gap: .55rem;
+      padding: .7rem .75rem .65rem;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); cursor: pointer; user-select: none;
+      transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+    }
+    .pcard:hover { background: var(--bg-elevated); border-color: var(--border-accent); }
+    .pcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .pcard.is-selected { border-color: var(--accent); background: var(--accent-glow); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+    .pcard__top    { display: flex; align-items: baseline; justify-content: space-between; gap: .4rem; }
+    .pcard__name   { font-size: 1.1rem; font-weight: 800; line-height: 1.2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pcard__ovr    { font-size: 1.35rem; font-weight: 800; line-height: 1; color: var(--accent); white-space: nowrap; }
+    .pcard__ovr small { font-size: .62rem; font-weight: 700; margin-left: .15rem; vertical-align: super; }
+    .pcard__ovr .up   { color: var(--success); }
+    .pcard__ovr .down { color: var(--danger); }
+    .pcard__bottom { display: flex; align-items: center; }
+    .pcard__forma  { width: 100%; font-size: .72rem; font-weight: 600; padding: .2rem .35rem; border-radius: 99px; cursor: pointer; font-family: inherit; }
+    .pcard__cap    { display: flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 700; }
+    .pcard__cap .cb-captain-btn { flex: 1; text-align: center; }
+
+    /* ── Campo: giocatori trascinabili ── */
+    .pitch-hint { font-size: .78rem; color: var(--text-muted); margin: -.25rem 0 .9rem; }
+    .formation-node { cursor: grab; touch-action: none; }
+    .formation-node.is-dragging { cursor: grabbing; opacity: .9; }
+    .formation-node.swap-target circle:first-child { stroke: var(--success); stroke-width: 4; }
+    .formation-svg.pitch-drop { outline: 3px dashed var(--success); outline-offset: -3px; }
+
     /* ── Captain selection ── */
     .captain-step {
       background: var(--bg-surface);
@@ -266,9 +305,9 @@
         <button id="btn-clear-sel"  class="btn btn--secondary btn--sm">✕ Azzera</button>
       </div>
       <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.75rem">
-        Ordinati per partite. Seleziona un numero <strong>pari ≥ 10</strong>. I capitani vanno in squadre diverse e l'algoritmo costruisce attorno a loro.
+        Ordinati per partite giocate. Tocca una card per selezionare un giocatore: serve un numero <strong>pari ≥ 10</strong>. I capitani vanno in squadre diverse e l'algoritmo costruisce attorno a loro.
       </p>
-      <div id="player-checkbox-list" class="matchmaker-list"></div>
+      <div id="player-checkbox-list" class="pgrid"></div>
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem">
         <button id="btn-generate" class="btn btn--primary btn--lg" disabled>⚡ Genera Squadre</button>
         <a href="/report.html" class="btn btn--secondary">📊 Report</a>
@@ -282,10 +321,14 @@
         <span style="font-weight:700;font-size:.95rem">🏟️ Squadre</span>
         <span id="sa-energy" style="font-size:.72rem;color:var(--text-muted);font-family:monospace"></span>
         <div class="spacer"></div>
+        <button id="btn-export-img" class="btn btn--secondary" title="Scarica la formazione come immagine PNG">📸 Scarica immagine</button>
+        <button id="btn-share-img"  class="btn btn--secondary hidden" title="Condividi la formazione (WhatsApp, Telegram…)">📤 Condividi</button>
         <button id="btn-reset-teams" class="btn btn--secondary">↺ Reset</button>
         <button id="btn-regen"       class="btn btn--secondary">🔄 Rigenera</button>
         <a href="/report.html" id="btn-confirm" class="btn btn--success">✅ Conferma →</a>
       </div>
+
+      <p class="pitch-hint">🖐️ Trascina i giocatori dove vuoi sul campo. Rilascia un giocatore sul campo dell'altra squadra, sopra un compagno, per scambiarli.</p>
 
       <!-- Balance meter -->
       <div class="balance-meter">

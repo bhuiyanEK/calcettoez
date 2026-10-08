@@ -27,22 +27,30 @@
       <button id="btn-add-player" class="btn btn--primary btn--lg">➕ Aggiungi</button>
     </div>
 
-    <!-- ── CSV Import ── -->
-    <div class="card csv-card" style="margin-bottom:1.75rem">
-      <h3 style="margin-bottom:.75rem">📂 Importa da CSV</h3>
-      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:.9rem">
-        Importa più giocatori in una volta sola. Scarica il template per vedere il formato corretto.
-      </p>
-      <div class="csv-row">
-        <input id="csv-file" type="file" accept=".csv,text/csv" class="input input--file" />
-        <button id="btn-import"   class="btn btn--primary">📥 Importa</button>
-        <button id="btn-template" class="btn btn--secondary">⬇️ Template CSV</button>
+    <!-- ── Ricerca e filtri ── -->
+    <div class="players-toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input id="player-search" class="input search-input" type="search" placeholder="Cerca per nickname, nome o ruolo…" autocomplete="off" />
       </div>
-      <div id="import-status" style="margin-top:.75rem;font-size:.85rem"></div>
+      <div id="role-filter" class="seg" role="group" aria-label="Filtra per ruolo">
+        <button type="button" class="seg__btn seg__btn--active" data-role="all">Tutti</button>
+        <button type="button" class="seg__btn" data-role="portiere" title="Portieri">🧤</button>
+        <button type="button" class="seg__btn" data-role="difensore" title="Difensori">🛡️</button>
+        <button type="button" class="seg__btn" data-role="centrocampista" title="Centrocampisti">🔵</button>
+        <button type="button" class="seg__btn" data-role="attaccante" title="Attaccanti">⚽</button>
+      </div>
+      <select id="sort-by" class="input input--sm players-sort" aria-label="Ordina per">
+        <option value="nickname">Ordina: Nickname</option>
+        <option value="ovr">Ordina: OVR</option>
+        <option value="partite">Ordina: Partite</option>
+      </select>
+      <span id="players-count" class="players-count"></span>
     </div>
 
     <!-- ── Add / Edit Form ── -->
-    <div id="form-section" class="form-section hidden">
+    <dialog id="form-section" class="modal">
+     <div class="modal__body">
       <h2 id="form-title" class="form-section__title">Aggiungi Giocatore</h2>
       <form id="player-form">
         <div class="form-grid">
@@ -143,15 +151,31 @@
           <div class="form-actions">
             <button type="submit" class="btn btn--primary">💾 Salva</button>
             <button id="btn-cancel" type="button" class="btn btn--secondary">✕ Annulla</button>
+            <button id="btn-delete" type="button" class="btn btn--danger hidden" style="margin-left:auto">🗑️ Elimina giocatore</button>
           </div>
         </div>
       </form>
-    </div>
+     </div>
+    </dialog>
 
     <!-- ── Player list ── -->
     <div id="player-list" class="cards-grid">
       <p class="empty-state">Caricamento...</p>
     </div>
+
+    <!-- ── CSV (compatto) ── -->
+    <details class="csv-details">
+      <summary>📂 Importa da CSV</summary>
+      <div class="csv-details__body">
+        <p>Importa più giocatori in una volta sola. Scarica il template per vedere il formato corretto.</p>
+        <div class="csv-row">
+          <input id="csv-file" type="file" accept=".csv,text/csv" class="input input--file input--sm" />
+          <button id="btn-import"   class="btn btn--primary btn--sm">📥 Importa</button>
+          <button id="btn-template" class="btn btn--secondary btn--sm">⬇️ Template CSV</button>
+        </div>
+        <div id="import-status" style="margin-top:.6rem;font-size:.85rem"></div>
+      </div>
+    </details>
   </div>
 
   <div id="toast" class="toast"></div>

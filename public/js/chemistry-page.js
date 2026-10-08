@@ -38,9 +38,10 @@ function showToast(msg, type="success") {
   setTimeout(() => toast.classList.remove("toast--visible"), 3000);
 }
 
-function chemKey(a, b) { return a < b ? `${a}:${b}` : `${b}:${a}`; }
+// Intesa asimmetrica: chiave direzionale = livello che `from` assegna a `to`
+function chemKey(from, to) { return `${from}:${to}`; }
 
-function getLevel(idA, idB) { return chemistry[chemKey(idA, idB)] ?? 0; }
+function getLevel(from, to) { return chemistry[chemKey(from, to)] ?? 0; }
 
 /** Count relations ≥1 for a given player */
 function countRelations(playerId) {
@@ -65,27 +66,32 @@ function getPlayerStatus(playerId) {
   return { ok, total, compagni, avversari };
 }
 
-// ── Render player pills ────────────────────────
+// ── Render player picker ───────────────────────
 function renderPills() {
   const query = playerSearch.value.trim().toLowerCase();
   const filtered = allPlayers.filter(p =>
     !query || p.nickname.toLowerCase().includes(query) || p.name.toLowerCase().includes(query)
   );
 
+  if (!filtered.length) {
+    playerPills.innerHTML = `<p class="empty-state" style="grid-column:1/-1;padding:1.5rem">Nessun giocatore trovato.</p>`;
+    return;
+  }
+
   playerPills.innerHTML = filtered.map(p => {
-    const { ok } = getPlayerStatus(p.id);
+    const { ok, total } = getPlayerStatus(p.id);
     return `
-    <button
-      class="player-pill ${p.id === selectedId ? "player-pill--active" : ""} ${!ok ? "player-pill--warn" : ""}"
+    <button type="button"
+      class="pick-tile pick-tile--${p.ruoloPreferito} ${p.id === selectedId ? "pick-tile--active" : ""} ${!ok ? "pick-tile--warn" : ""}"
       data-id="${p.id}"
-      title="${p.name}${!ok ? " · Relazioni insufficienti" : ""}"
-    >
-      ${ROLE_ICON[p.ruoloPreferito] || "❓"} ${p.nickname}
-      ${!ok ? `<span class="pill-warn">!</span>` : ""}
+      title="${p.name}${!ok ? " · Relazioni insufficienti" : ""}">
+      <span class="pick-tile__avatar">${ROLE_ICON[p.ruoloPreferito] || "❓"}</span>
+      <span class="pick-tile__nick">${p.nickname}</span>
+      <span class="pick-tile__meta">${ok ? `✓ ${total} relazioni` : `⚠ ${total} relazioni`}</span>
     </button>`;
   }).join("");
 
-  playerPills.querySelectorAll(".player-pill").forEach(btn =>
+  playerPills.querySelectorAll(".pick-tile").forEach(btn =>
     btn.addEventListener("click", () => selectPlayer(btn.dataset.id))
   );
 }
@@ -148,17 +154,17 @@ function renderRelGrid() {
     return `
     <div class="rel-card rel-card--${level}" data-id="${p.id}">
       <div class="rel-card__player">
-        <span class="rel-card__icon">${ROLE_ICON[p.ruoloPreferito] || "❓"}</span>
-        <div>
+        <span class="rel-card__avatar">${ROLE_ICON[p.ruoloPreferito] || "❓"}</span>
+        <div class="rel-card__who">
           <div class="rel-card__nick">${p.nickname}</div>
           <div class="rel-card__name">${p.name} · ${p.ruoloPreferito}</div>
         </div>
-        <span class="chem-badge ${lbl.cls}" style="margin-left:auto">${lbl.label}</span>
+        <span class="chem-badge ${lbl.cls}">${lbl.label}</span>
       </div>
-      <div class="rel-card__buttons">
+      <div class="rel-card__buttons" role="group" aria-label="Livello di intesa verso ${p.nickname}">
         ${CHEM_LEVELS.map(c => `
-          <button
-            class="rel-level-btn ${level === c.value ? "rel-level-btn--active" : ""}"
+          <button type="button"
+            class="rel-level-btn rel-level-btn--${c.value} ${level === c.value ? "rel-level-btn--active" : ""}"
             data-level="${c.value}" data-target="${p.id}"
             title="${c.label}"
           >${c.value}</button>
@@ -188,7 +194,7 @@ async function saveChemistry(idA, idB, level) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    // Update local state (symmetric)
+    // Update local state (solo la direzione idA → idB)
     const key = chemKey(idA, idB);
     if (level === 0) delete chemistry[key]; else chemistry[key] = level;
 
