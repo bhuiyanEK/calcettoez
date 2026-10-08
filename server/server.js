@@ -7,7 +7,7 @@ const path    = require("path");
 const { v4: uuidv4 } = require("uuid");
 
 const db = require("./db");
-const { simulatedAnnealing, teamStrength, getChem: getSAchem, chemKey, CHEMISTRY_BONUS }
+const { simulatedAnnealing, teamStrength, getChem: getSAchem, chemKey, bonusOf }
   = require("./sa-matchmaker");
 const { generateSuggestions } = require("./chemistry-engine");
 const { authMiddleware, loginHandler } = require("./auth");
@@ -87,10 +87,21 @@ function check(result) {
   return result.data;
 }
 
-// Chemistry map from DB
+// Chemistry map from DB. Le chiavi sono direzionali ("from:to" = livello che `from` assegna a `to`).
 async function getChemMap() {
   const rows = check(await db.from("chemistry").select("key,level"));
   return Object.fromEntries(rows.map(r=>[r.key,r.level]));
+}
+
+// Vista simmetrica (chiave ordinata, livello medio arrotondato) per il motore dei suggerimenti
+function symmetricChemMap(chemMap) {
+  const pairs = {};
+  for (const [key, level] of Object.entries(chemMap)) {
+    const [from, to] = key.split(":");
+    const sorted = from < to ? key : `${to}:${from}`;
+    pairs[sorted] = (pairs[sorted] ?? 0) + level;
+  }
+  return Object.fromEntries(Object.entries(pairs).map(([k, sum]) => [k, Math.round(sum / 2)]));
 }
 
 function computeAutoForma(playerId, matches) {
@@ -295,6 +306,7 @@ app.get("/chemistry/matrix",async(_,res)=>{
   }catch(err){res.status(500).json({error:err.message});}
 });
 
+// Intesa asimmetrica: imposta il livello che idA assegna a idB (non tocca idB → idA)
 app.put("/chemistry/:idA/:idB",async(req,res)=>{
   try{
     const{idA,idB}=req.params;const level=Number(req.body.level);
@@ -318,9 +330,10 @@ app.post("/suggestions/:id/accept",async(req,res)=>{
     if(!rows.length)return res.status(404).json({error:"Non trovato."});
     const sug=rows[0];
     await db.from("suggestions").update({status:"accepted"}).eq("id",sug.id);
-    const key=chemKey(sug.id_a,sug.id_b);
-    if(sug.suggested_level===0)await db.from("chemistry").delete().eq("key",key);
-    else check(await db.from("chemistry").upsert({key,level:sug.suggested_level},{onConflict:"key"}));
+    // Il suggerimento riguarda la coppia: applica il livello in entrambe le direzioni
+    const keys=[chemKey(sug.id_a,sug.id_b),chemKey(sug.id_b,sug.id_a)];
+    if(sug.suggested_level===0)await db.from("chemistry").delete().in("key",keys);
+    else check(await db.from("chemistry").upsert(keys.map(key=>({key,level:sug.suggested_level})),{onConflict:"key"}));
     res.json({message:`Intesa aggiornata a ${sug.suggested_level}.`});
   }catch(err){res.status(500).json({error:err.message});}
 });
@@ -362,7 +375,7 @@ app.post("/match",async(req,res)=>{
 
     const strA=teamStrength(teamA,effectiveAvgOVR,chemMap);
     const strB=teamStrength(teamB,effectiveAvgOVR,chemMap);
-    const chemBreakdown=team=>{const pairs=[];for(let i=0;i<team.length;i++)for(let j=i+1;j<team.length;j++){const c=getSAchem(chemMap,team[i].id,team[j].id);if(c>0)pairs.push({a:team[i].nickname,b:team[j].nickname,level:c,bonus:CHEMISTRY_BONUS[c]});}return pairs;};
+    const chemBreakdown=team=>{const pairs=[];for(let i=0;i<team.length;i++)for(let j=i+1;j<team.length;j++){const c=getSAchem(chemMap,team[i].id,team[j].id);if(c>0)pairs.push({a:team[i].nickname,b:team[j].nickname,level:c,bonus:bonusOf(c)});}return pairs;};
 
     res.json({teamA:assignedA,teamB:assignedB,strengthA:Math.round(strA*10)/10,strengthB:Math.round(strB*10)/10,chemistryA:chemBreakdown(teamA),chemistryB:chemBreakdown(teamB),saEnergy:Math.round(finalEnergy*100)/100});
   }catch(err){res.status(500).json({error:err.message});}
@@ -487,7 +500,7 @@ app.post("/report",async(req,res)=>{
     const matchesPlain=check(allMatches).map(m=>({teamA:m.team_a,teamB:m.team_b,ratings:m.ratings}));
     const existingPlain=check(existingSuggs).map(s=>({idA:s.id_a,idB:s.id_b,suggestedLevel:s.suggested_level,status:s.status}));
 
-    const newSuggs=generateSuggestions(matchesPlain,chemMap,existingPlain,playersPlain);
+    const newSuggs=generateSuggestions(matchesPlain,symmetricChemMap(chemMap),existingPlain,playersPlain);
     if(newSuggs.length){
       await db.from("suggestions").insert(newSuggs.map(s=>({
         id:s.id,id_a:s.idA,id_b:s.idB,nickname_a:s.nicknameA,nickname_b:s.nicknameB,
@@ -536,6 +549,15 @@ app.delete("/matches/:id",async(req,res)=>{
 app.get("/matches",async(_,res)=>{try{res.json(check(await db.from("matches").select("*").order("date",{ascending:false})));}catch(err){res.status(500).json({error:err.message});}});
 app.get("/role-weights",(_,res)=>res.json(ROLE_WEIGHTS));
 app.get("/forma-options",(_,res)=>res.json(FORMA_DELTA));
+
+// ─────────────────────────────────────────────
+// 404: pagina dedicata per le richieste HTML, JSON per le API
+// ─────────────────────────────────────────────
+app.use((req, res) => {
+  if (req.method === "GET" && req.accepts(["html", "json"]) === "html")
+    return res.status(404).sendFile(path.join(__dirname, "../public/404.html"));
+  res.status(404).json({ error: "Non trovato." });
+});
 
 // ─────────────────────────────────────────────
 // Start

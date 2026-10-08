@@ -1,5 +1,5 @@
 /**
- * chemistry.js – Gestione matrice intesa tra giocatori
+ * chemistry.js – Gestione matrice intesa tra giocatori (riga = chi vota, colonna = verso chi)
  * Usato dentro matchmaker.html via import
  */
 
@@ -31,7 +31,7 @@ export async function loadChemistryMatrix(container) {
       if (pA.id === pB.id) {
         html += `<td class="chem-cell chem-self">·</td>`;
       } else {
-        const key   = [pA.id, pB.id].sort().join(":");
+        const key   = `${pA.id}:${pB.id}`; // intesa asimmetrica: pA → pB
         const level = chemistry[key] ?? 0;
         const lbl   = CHEM_LABELS[level];
         html += `
@@ -64,12 +64,6 @@ export async function loadChemistryMatrix(container) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ level: Number(sel.value) }),
         });
-        // Mirror the symmetric cell
-        const mirror = container.querySelector(`[data-a="${sel.dataset.b}"][data-b="${sel.dataset.a}"]`);
-        if (mirror) {
-          mirror.value = sel.value;
-          mirror.className = `chem-select ${CHEM_LABELS[Number(sel.value)].cls}`;
-        }
       }, 300);
     });
   });

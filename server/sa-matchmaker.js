@@ -15,6 +15,14 @@
 // Constants
 // ─────────────────────────────────────────────
 const CHEMISTRY_BONUS = { 0: 0, 1: 0.3, 2: 0.8, 3: 2.0, 4: 3.5 };
+
+// L'intesa è asimmetrica (A→B può differire da B→A); per il matchmaking si usa la media,
+// quindi i livelli possono essere frazionari (es. (5+3)/2). Il bonus viene interpolato.
+function bonusOf(level) {
+  const lo = Math.floor(level), hi = Math.ceil(level);
+  if (lo === hi) return CHEMISTRY_BONUS[lo] ?? 0;
+  return CHEMISTRY_BONUS[lo] + (CHEMISTRY_BONUS[hi] - CHEMISTRY_BONUS[lo]) * (level - lo);
+}
 const M     = 100;    // hard-constraint penalty weight
 const GAMMA = 1.5;    // soft-constraint penalty weight (keep high-intesa together)
 const HIGH_INTESA_THRESHOLD = 3;
@@ -30,12 +38,18 @@ const ITER_PER_STEP_FACTOR = 4; // iterations = factor * n
 // ─────────────────────────────────────────────
 // Chemistry helpers
 // ─────────────────────────────────────────────
-function chemKey(idA, idB) {
-  return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
+// Chiave direzionale: livello che `from` assegna a `to`
+function chemKey(from, to) {
+  return `${from}:${to}`;
 }
 
+function getDirectedChem(chemMap, from, to) {
+  return chemMap[chemKey(from, to)] ?? 0;
+}
+
+// Intesa effettiva di coppia = media dei due livelli direzionali
 function getChem(chemMap, idA, idB) {
-  return chemMap[chemKey(idA, idB)] ?? 0;
+  return (getDirectedChem(chemMap, idA, idB) + getDirectedChem(chemMap, idB, idA)) / 2;
 }
 
 // ─────────────────────────────────────────────
@@ -46,15 +60,18 @@ function teamStrength(team, ovrFn, chemMap) {
   let   bonus = 0;
   for (let i = 0; i < team.length; i++)
     for (let j = i + 1; j < team.length; j++)
-      bonus += CHEMISTRY_BONUS[getChem(chemMap, team[i].id, team[j].id)];
+      bonus += bonusOf(getChem(chemMap, team[i].id, team[j].id));
   return base + bonus;
 }
+
+// "Di vista" = intesa media arrotondata a 1
+const isLow = c => Math.round(c) === LOW_INTESA_LEVEL;
 
 function lowIntesaCount(team, chemMap) {
   let count = 0;
   for (let i = 0; i < team.length; i++)
     for (let j = i + 1; j < team.length; j++)
-      if (getChem(chemMap, team[i].id, team[j].id) === LOW_INTESA_LEVEL) count++;
+      if (isLow(getChem(chemMap, team[i].id, team[j].id))) count++;
   return count;
 }
 
@@ -64,7 +81,7 @@ function separationPenalty(team, otherTeam, chemMap) {
   for (const p of team)
     for (const q of otherTeam) {
       const c = getChem(chemMap, p.id, q.id);
-      if (c >= HIGH_INTESA_THRESHOLD) pen += CHEMISTRY_BONUS[c];
+      if (c >= HIGH_INTESA_THRESHOLD) pen += bonusOf(c);
     }
   return pen;
 }
@@ -97,9 +114,9 @@ function deltaSwap(teamA, teamB, iA, iB, ovrFn, chemMap) {
     const other = teamA[k];
     const cOld = getChem(chemMap, pA.id, other.id);
     const cNew = getChem(chemMap, pB.id, other.id);
-    dBonusA += CHEMISTRY_BONUS[cNew] - CHEMISTRY_BONUS[cOld];
-    if (cOld === LOW_INTESA_LEVEL) dLowA--;
-    if (cNew === LOW_INTESA_LEVEL) dLowA++;
+    dBonusA += bonusOf(cNew) - bonusOf(cOld);
+    if (isLow(cOld)) dLowA--;
+    if (isLow(cNew)) dLowA++;
   }
   dsA += dBonusA;
 
@@ -110,9 +127,9 @@ function deltaSwap(teamA, teamB, iA, iB, ovrFn, chemMap) {
     const other = teamB[k];
     const cOld = getChem(chemMap, pB.id, other.id);
     const cNew = getChem(chemMap, pA.id, other.id);
-    dBonusB += CHEMISTRY_BONUS[cNew] - CHEMISTRY_BONUS[cOld];
-    if (cOld === LOW_INTESA_LEVEL) dLowB--;
-    if (cNew === LOW_INTESA_LEVEL) dLowB++;
+    dBonusB += bonusOf(cNew) - bonusOf(cOld);
+    if (isLow(cOld)) dLowB--;
+    if (isLow(cNew)) dLowB++;
   }
   dsB += dBonusB;
 
@@ -120,8 +137,8 @@ function deltaSwap(teamA, teamB, iA, iB, ovrFn, chemMap) {
   // pA moves A→B: now in same team as pB (was opposite)
   // pB moves B→A: now in same team as pA (was opposite)
   const cAB = getChem(chemMap, pA.id, pB.id);
-  dsA += -CHEMISTRY_BONUS[cAB]; // pB was not in A; now it is, but so was pA—now pA is gone. Net: they swap.
-  dsB += -CHEMISTRY_BONUS[cAB]; // same logic for B
+  dsA += -bonusOf(cAB); // pB was not in A; now it is, but so was pA—now pA is gone. Net: they swap.
+  dsB += -bonusOf(cAB); // same logic for B
 
   // Separation penalty delta: pairs (pA, q) where q is in B and pA moves to B
   // Before: pA in A, each q in B → cross-pair (penalised if high intesa)
@@ -131,24 +148,24 @@ function deltaSwap(teamA, teamB, iA, iB, ovrFn, chemMap) {
   for (let k = 0; k < teamB.length; k++) {
     if (k === iB) continue;
     const c = getChem(chemMap, pA.id, teamB[k].id);
-    if (c >= HIGH_INTESA_THRESHOLD) dSep -= CHEMISTRY_BONUS[c]; // resolved
+    if (c >= HIGH_INTESA_THRESHOLD) dSep -= bonusOf(c); // resolved
   }
   for (let k = 0; k < teamA.length; k++) {
     if (k === iA) continue;
     const c = getChem(chemMap, pB.id, teamA[k].id);
-    if (c >= HIGH_INTESA_THRESHOLD) dSep -= CHEMISTRY_BONUS[c]; // resolved
+    if (c >= HIGH_INTESA_THRESHOLD) dSep -= bonusOf(c); // resolved
   }
   // New separations: pA leaves A (now pA might be separated from A members)
   for (let k = 0; k < teamA.length; k++) {
     if (k === iA) continue;
     const c = getChem(chemMap, pA.id, teamA[k].id);
-    if (c >= HIGH_INTESA_THRESHOLD) dSep += CHEMISTRY_BONUS[c]; // new separation
+    if (c >= HIGH_INTESA_THRESHOLD) dSep += bonusOf(c); // new separation
   }
   // pB leaves B
   for (let k = 0; k < teamB.length; k++) {
     if (k === iB) continue;
     const c = getChem(chemMap, pB.id, teamB[k].id);
-    if (c >= HIGH_INTESA_THRESHOLD) dSep += CHEMISTRY_BONUS[c];
+    if (c >= HIGH_INTESA_THRESHOLD) dSep += bonusOf(c);
   }
 
   return { dsA, dsB, dLowA, dLowB, dSep };
@@ -223,4 +240,4 @@ function simulatedAnnealing(players, ovrFn, chemMap) {
 // ─────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────
-module.exports = { simulatedAnnealing, teamStrength, getChem, chemKey, CHEMISTRY_BONUS };
+module.exports = { simulatedAnnealing, teamStrength, getChem, getDirectedChem, chemKey, bonusOf, CHEMISTRY_BONUS };

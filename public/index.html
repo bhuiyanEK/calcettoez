@@ -4,13 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CalcettoEz</title>
+  <meta name="description" content="Gestisci il gruppo del calcetto: giocatori, intesa, squadre bilanciate e statistiche di ogni partita." />
+  <meta name="theme-color" content="#0c0e0b" />
+  <meta property="og:title" content="CalcettoEz" />
+  <meta property="og:description" content="Squadre bilanciate e statistiche per il tuo calcetto." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500;600;700&family=Outfit:wght@500;600;700;800&display=swap" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav">
-    <a href="/" class="nav__logo">⚽ CalcettoEz</a>
+  <a class="skip-link" href="#main">Vai al contenuto</a>
+  <nav class="nav" aria-label="Principale">
+    <a href="/" class="nav__logo">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="12.5"/><path d="M16 10.4l4.9 3.6-1.9 5.8h-6l-1.9-5.8z"/><path d="M16 3.5v6.9M20.9 14l6.4-2.1M19 19.8l3.9 5.4M13 19.8l-3.9 5.4M11.1 14L4.7 11.9"/></svg>
+      <span>Calcetto<b>Ez</b></span>
+    </a>
     <ul class="nav__links">
-      <li><a href="/" class="active">Home</a></li>
+      <li><a href="/" class="active" aria-current="page">Home</a></li>
       <li><a href="/players.html">Giocatori</a></li>
       <li><a href="/chemistry.html">Intesa</a></li>
       <li><a href="/matchmaker.html">Matchmaker</a></li>
@@ -18,31 +30,68 @@
     </ul>
   </nav>
 
-  <div class="page-wrapper">
-    <div class="page-header">
+  <main id="main" class="page-wrapper">
+    <header class="page-header hero">
       <div>
-        <h1 class="page-header__title">⚽ FantaCalcetto Manager</h1>
-        <p class="page-header__sub">Gestisci il tuo gruppo, genera squadre bilanciate, traccia le statistiche.</p>
+        <h1 class="page-header__title">FantaCalcetto<br />Manager</h1>
+        <p class="page-header__sub">Gestisci il tuo gruppo, genera squadre bilanciate e tieni traccia delle statistiche partita dopo partita.</p>
       </div>
-    </div>
+    </header>
 
-    <div class="home-grid">
-      <a href="/players.html" class="card home-card">
-        <span class="home-card__icon">👥</span>
-        <span class="home-card__title">Giocatori</span>
-        <p class="home-card__desc">Aggiungi, modifica ed elimina giocatori. Visualizza stats e storico.</p>
-      </a>
-      <a href="/matchmaker.html" class="card home-card">
-        <span class="home-card__icon">⚡</span>
-        <span class="home-card__title">Matchmaker</span>
-        <p class="home-card__desc">Seleziona 10 giocatori e genera squadre bilanciate automaticamente.</p>
-      </a>
-      <a href="/report.html" class="card home-card">
-        <span class="home-card__icon">📊</span>
-        <span class="home-card__title">Report Partita</span>
-        <p class="home-card__desc">Inserisci risultato, voti, goal e assist. Le statistiche si aggiornano in automatico.</p>
-      </a>
+    <div class="home-layout">
+      <!-- ── Mini-classifiche ── -->
+      <section class="card lb-card" aria-labelledby="lb-heading">
+        <div class="lb-head">
+          <h2 id="lb-heading" class="lb-head__title">Classifiche</h2>
+          <div class="lb-filters">
+            <div id="lb-mode" class="seg" role="group" aria-label="Tipo di periodo">
+              <button type="button" class="seg__btn seg__btn--active" data-mode="season">Stagione</button>
+              <button type="button" class="seg__btn" data-mode="month">Mese</button>
+            </div>
+            <select id="lb-period" class="input input--sm lb-period" aria-label="Periodo"></select>
+          </div>
+        </div>
+
+        <div id="lb-tabs" class="seg seg--full" role="tablist" aria-label="Classifica">
+          <button type="button" role="tab" class="seg__btn seg__btn--active" data-metric="goals">Capocannoniere</button>
+          <button type="button" role="tab" class="seg__btn" data-metric="assists">Assistman</button>
+          <button type="button" role="tab" class="seg__btn" data-metric="rating">Voto medio</button>
+        </div>
+
+        <div id="lb-list" class="lb-list" aria-live="polite">
+          <span class="skeleton skeleton--row"></span>
+          <span class="skeleton skeleton--row"></span>
+          <span class="skeleton skeleton--row"></span>
+        </div>
+        <p id="lb-note" class="lb-note"></p>
+      </section>
+
+      <!-- ── Accessi rapidi ── -->
+      <nav class="home-links" aria-label="Sezioni">
+        <a href="/matchmaker.html" class="home-link home-link--primary">
+          <span class="home-link__title">Genera le squadre</span>
+          <span class="home-link__desc">Scegli chi gioca e ottieni due formazioni bilanciate, con intesa e forma di ognuno.</span>
+          <svg class="home-link__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="/report.html" class="home-link">
+          <span class="home-link__title">Report partita</span>
+          <span class="home-link__desc">Risultato, voti, gol e assist. Le statistiche si aggiornano da sole.</span>
+          <svg class="home-link__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="/players.html" class="home-link">
+          <span class="home-link__title">Giocatori</span>
+          <span class="home-link__desc">Aggiungi e modifica la rosa, consulta storico e attributi.</span>
+          <svg class="home-link__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="/chemistry.html" class="home-link">
+          <span class="home-link__title">Intesa</span>
+          <span class="home-link__desc">Imposta come ti trovi con ogni compagno: pesa sul bilanciamento.</span>
+          <svg class="home-link__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </nav>
     </div>
-  </div>
+  </main>
+
+  <script type="module" src="/js/home.js"></script>
 </body>
 </html>
